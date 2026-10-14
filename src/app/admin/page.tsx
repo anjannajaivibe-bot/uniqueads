@@ -59,7 +59,7 @@ function dashboardActions(role: string): Action[] {
 export default async function DashboardPage() {
   const currentUser = await requireAppUser();
   const [m, orders] = await Promise.all([
-    getDashboardMetrics(),
+    getDashboardMetrics(currentUser),
     getRecentOrdersForUser(currentUser),
   ]);
 
@@ -112,6 +112,42 @@ export default async function DashboardPage() {
           </>
         ) : null}
       </section>
+
+      {(Number(m.overdue_followups || 0) > 0 ||
+        Number(m.blocked_locations || 0) > 0 ||
+        Number(m.overdue_invoices || 0) > 0) ? (
+        <section className="panel attention-panel">
+          <div className="panel-head">
+            <div>
+              <h2>Needs Attention</h2>
+              <p>Items that may need action today.</p>
+            </div>
+          </div>
+          <div className="attention-grid">
+            {showSales && Number(m.overdue_followups || 0) > 0 ? (
+              <Link href="/admin/leads" className="attention-card">
+                <span>Overdue Follow-ups</span>
+                <strong>{number(m.overdue_followups)}</strong>
+                <small>Open lead pipeline</small>
+              </Link>
+            ) : null}
+            {showField && Number(m.blocked_locations || 0) > 0 ? (
+              <Link href="/admin/work-progress" className="attention-card">
+                <span>Blocked Locations</span>
+                <strong>{number(m.blocked_locations)}</strong>
+                <small>Review field issues</small>
+              </Link>
+            ) : null}
+            {showFinance && Number(m.overdue_invoices || 0) > 0 ? (
+              <Link href="/admin/finance" className="attention-card">
+                <span>Overdue Invoices</span>
+                <strong>{number(m.overdue_invoices)}</strong>
+                <small>Follow up collections</small>
+              </Link>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <section className="panel dashboard-actions">
         <div className="panel-head">
