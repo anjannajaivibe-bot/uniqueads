@@ -1,6 +1,8 @@
 import { sql } from "@/lib/db";
+import type { CurrentAppUser } from "@/lib/auth/authorization";
 
-export async function getWorkProgressOverview() {
+export async function getWorkProgressOverview(user: CurrentAppUser) {
+  const supervisorOnly = user.role === "supervisor";
   return sql`
     SELECT
       ol.id,
@@ -53,6 +55,20 @@ export async function getWorkProgressOverview() {
     ) u ON true
     WHERE o.status <> 'cancelled'
       AND ol.status <> 'cancelled'
+      AND (
+        ${supervisorOnly} = false
+        OR o.assigned_supervisor = ${user.id}::uuid
+        OR (
+          ${user.worker_id}::uuid IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM order_worker_assignments owa_scope
+            WHERE owa_scope.order_id = o.id
+              AND owa_scope.worker_id = ${user.worker_id}::uuid
+              AND owa_scope.released_on IS NULL
+          )
+        )
+      )
     ORDER BY
       CASE
         WHEN ol.status = 'blocked' THEN 0
@@ -70,23 +86,40 @@ export async function getWorkProgressOverview() {
   `;
 }
 
-export async function getWorkProgressCounts() {
+export async function getWorkProgressCounts(user: CurrentAppUser) {
+  const supervisorOnly = user.role === "supervisor";
   const rows = await sql`
     SELECT
-      count(*) FILTER (WHERE status IN ('pending', 'assigned'))::int AS waiting_count,
-      count(*) FILTER (WHERE status = 'in_progress')::int AS in_progress_count,
-      count(*) FILTER (WHERE status = 'quality_check')::int AS quality_count,
-      count(*) FILTER (WHERE status = 'blocked')::int AS blocked_count,
-      count(*) FILTER (WHERE status = 'completed')::int AS completed_count,
-      ROUND(COALESCE(AVG(progress_percent) FILTER (
-        WHERE status <> 'cancelled'
-      ), 0))::int AS average_progress
-    FROM order_locations
+      count(*) FILTER (WHERE ol.status IN ('pending', 'assigned'))::int AS waiting_count,
+      count(*) FILTER (WHERE ol.status = 'in_progress')::int AS in_progress_count,
+      count(*) FILTER (WHERE ol.status = 'quality_check')::int AS quality_count,
+      count(*) FILTER (WHERE ol.status = 'blocked')::int AS blocked_count,
+      count(*) FILTER (WHERE ol.status = 'completed')::int AS completed_count,
+      ROUND(COALESCE(AVG(ol.progress_percent), 0))::int AS average_progress
+    FROM order_locations ol
+    JOIN orders o ON o.id = ol.order_id
+    WHERE o.status <> 'cancelled'
+      AND ol.status <> 'cancelled'
+      AND (
+        ${supervisorOnly} = false
+        OR o.assigned_supervisor = ${user.id}::uuid
+        OR (
+          ${user.worker_id}::uuid IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM order_worker_assignments owa_scope
+            WHERE owa_scope.order_id = o.id
+              AND owa_scope.worker_id = ${user.worker_id}::uuid
+              AND owa_scope.released_on IS NULL
+          )
+        )
+      )
   `;
   return rows[0];
 }
 
-export async function getWorkLocation(id: string) {
+export async function getWorkLocation(id: string, user: CurrentAppUser) {
+  const supervisorOnly = user.role === "supervisor";
   const rows = await sql`
     SELECT
       ol.*,
@@ -104,6 +137,20 @@ export async function getWorkLocation(id: string) {
     JOIN customers c ON c.id = o.customer_id
     LEFT JOIN app_users s ON s.id = o.assigned_supervisor
     WHERE ol.id = ${id}::uuid
+      AND (
+        ${supervisorOnly} = false
+        OR o.assigned_supervisor = ${user.id}::uuid
+        OR (
+          ${user.worker_id}::uuid IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM order_worker_assignments owa_scope
+            WHERE owa_scope.order_id = o.id
+              AND owa_scope.worker_id = ${user.worker_id}::uuid
+              AND owa_scope.released_on IS NULL
+          )
+        )
+      )
     LIMIT 1
   `;
   return rows[0] ?? null;
