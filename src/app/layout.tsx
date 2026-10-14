@@ -5,6 +5,11 @@ import { Providers } from "./providers";
 export const metadata: Metadata = {
   title: "Unique Ads Operations",
   description: "Operational administration platform for Unique Ads.",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
