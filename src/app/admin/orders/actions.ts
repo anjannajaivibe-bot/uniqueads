@@ -109,6 +109,49 @@ export async function updateOrderStatus(formData: FormData) {
     throw new Error("Invalid order status.");
   }
 
+  const integrityRows = await sql`
+    SELECT
+      count(ol.id) FILTER (WHERE ol.status <> 'cancelled')::int AS active_locations,
+      count(ol.id) FILTER (WHERE ol.status <> 'cancelled' AND ol.status <> 'completed')::int AS incomplete_locations,
+      count(i.id) FILTER (WHERE i.status <> 'cancelled')::int AS invoice_count,
+      COALESCE(sum(GREATEST(i.total_amount - i.amount_paid, 0)) FILTER (WHERE i.status <> 'cancelled'), 0) AS invoice_outstanding
+    FROM orders o
+    LEFT JOIN order_locations ol ON ol.order_id = o.id
+    LEFT JOIN invoices i ON i.order_id = o.id
+    WHERE o.id = ${orderId}::uuid
+    GROUP BY o.id
+  `;
+
+  const integrity = integrityRows[0] as any;
+  if (!integrity) throw new Error("Order not found.");
+
+  if (status === "completed") {
+    if (Number(integrity.active_locations || 0) === 0) {
+      throw new Error("Add at least one campaign location before completing the order.");
+    }
+    if (Number(integrity.incomplete_locations || 0) > 0) {
+      throw new Error(
+        "Every active location must be completed through Live Photo Capture before the order can be completed."
+      );
+    }
+  }
+
+  if (status === "invoiced" && Number(integrity.invoice_count || 0) === 0) {
+    throw new Error("Create an invoice before marking the order invoiced.");
+  }
+
+  if (status === "closed") {
+    if (Number(integrity.active_locations || 0) === 0 || Number(integrity.incomplete_locations || 0) > 0) {
+      throw new Error("Complete all campaign locations before closing the order.");
+    }
+    if (Number(integrity.invoice_count || 0) === 0) {
+      throw new Error("An invoice is required before closing the order.");
+    }
+    if (Number(integrity.invoice_outstanding || 0) > 0) {
+      throw new Error("Outstanding invoice balance must be cleared before closing the order.");
+    }
+  }
+
   await sql`
     UPDATE orders
     SET
@@ -214,7 +257,6 @@ export async function updateOrderLocation(formData: FormData) {
     "assigned",
     "in_progress",
     "quality_check",
-    "completed",
     "blocked",
     "cancelled",
   ];
@@ -223,20 +265,14 @@ export async function updateOrderLocation(formData: FormData) {
     throw new Error("Invalid location update.");
   }
 
-  const safeProgress =
-    status === "completed"
-      ? 100
-      : Math.min(100, Math.max(0, progress ?? 0));
+  const safeProgress = Math.min(99, Math.max(0, progress ?? 0));
 
   const rows = await sql`
     UPDATE order_locations
     SET
       status = ${status},
       progress_percent = ${safeProgress},
-      completed_date = CASE
-        WHEN ${status} = 'completed' THEN COALESCE(completed_date, CURRENT_DATE)
-        ELSE NULL
-      END,
+      completed_date = NULL,
       client_approved = ${clean(formData.get("client_approved")) === "true"},
       notes = ${clean(formData.get("notes"))},
       updated_at = now()
