@@ -214,6 +214,20 @@ export async function POST(request: NextRequest) {
 
   const bytes = Buffer.from(await file.arrayBuffer());
 
+  const isJpeg =
+    bytes.length >= 4 &&
+    bytes[0] === 0xff &&
+    bytes[1] === 0xd8 &&
+    bytes[bytes.length - 2] === 0xff &&
+    bytes[bytes.length - 1] === 0xd9;
+
+  if (!isJpeg) {
+    return NextResponse.json(
+      { error: "Live photo data is not a valid JPEG image." },
+      { status: 400 }
+    );
+  }
+
   await storageClient().send(
     new PutObjectCommand({
       Bucket: bucket,
