@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHeader, StatCard } from "@/components/ui";
+import { requireAppUser } from "@/lib/auth/authorization";
 import {
   getWorkProgressCounts,
   getWorkProgressOverview,
@@ -23,9 +24,10 @@ function date(value: any) {
 }
 
 export default async function WorkProgressPage() {
+  const currentUser = await requireAppUser();
   const [rows, counts] = await Promise.all([
-    getWorkProgressOverview(),
-    getWorkProgressCounts(),
+    getWorkProgressOverview(currentUser),
+    getWorkProgressCounts(currentUser),
   ]);
 
   const groups = new Map<string, any>();
