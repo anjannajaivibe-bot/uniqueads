@@ -1,28 +1,161 @@
 import { sql } from "@/lib/db";
+import type { CurrentAppUser } from "@/lib/auth/authorization";
+import { ACCESS, roleAllowed } from "@/lib/auth/permissions";
 
-export async function getDashboardMetrics() {
+export async function getDashboardMetrics(user: CurrentAppUser) {
+  const canSales = roleAllowed(user.role, ACCESS.sales);
+  const canField = roleAllowed(user.role, ACCESS.field);
+  const canFinance = roleAllowed(user.role, ACCESS.finance);
+  const canCommercial =
+    canFinance ||
+    user.role === "super_admin" ||
+    user.role === "operations_manager";
+  const supervisorOnly = user.role === "supervisor";
+
   const rows = await sql`
     SELECT
-      (SELECT count(*)::int FROM leads WHERE status IN ('new','contacted','requirement_received','quotation_sent','negotiation')) AS open_leads,
-      (SELECT count(*)::int FROM quotations WHERE status IN ('draft','sent')) AS pending_quotations,
-      (SELECT count(*)::int FROM orders WHERE status NOT IN ('closed','cancelled','completed')) AS active_orders,
-      (SELECT count(*)::int FROM order_locations WHERE status = 'completed') AS completed_locations,
-      (SELECT count(*)::int FROM order_locations) AS total_locations,
-      (SELECT COALESCE(sum(total_order_amount),0) FROM orders WHERE date_trunc('month', created_at) = date_trunc('month', now())) AS month_order_value,
-      (SELECT COALESCE(sum(total_amount - amount_paid),0) FROM invoices WHERE status <> 'cancelled') AS customer_outstanding,
-      (SELECT COALESCE(sum(amount),0) FROM expenses WHERE date_trunc('month', expense_date) = date_trunc('month', CURRENT_DATE)) AS month_expenses,
-      (SELECT COALESCE(sum(amount),0) FROM worker_payments WHERE date_trunc('month', payment_date) = date_trunc('month', CURRENT_DATE)) AS month_worker_payments
+      CASE WHEN ${canSales} THEN (
+        SELECT count(*)::int
+        FROM leads
+        WHERE status IN ('new','contacted','requirement_received','quotation_sent','negotiation')
+      ) ELSE 0 END AS open_leads,
+
+      CASE WHEN ${canSales} THEN (
+        SELECT count(*)::int
+        FROM quotations
+        WHERE status IN ('draft','sent')
+      ) ELSE 0 END AS pending_quotations,
+
+      CASE WHEN ${canField} THEN (
+        SELECT count(*)::int
+        FROM orders o
+        WHERE o.status NOT IN ('closed','cancelled','completed')
+          AND (
+            ${supervisorOnly} = false
+            OR o.assigned_supervisor = ${user.id}::uuid
+            OR (
+              ${user.worker_id}::uuid IS NOT NULL
+              AND EXISTS (
+                SELECT 1
+                FROM order_worker_assignments owa
+                WHERE owa.order_id = o.id
+                  AND owa.worker_id = ${user.worker_id}::uuid
+                  AND owa.released_on IS NULL
+              )
+            )
+          )
+      ) ELSE 0 END AS active_orders,
+
+      CASE WHEN ${canField} THEN (
+        SELECT count(*)::int
+        FROM order_locations ol
+        JOIN orders o ON o.id = ol.order_id
+        WHERE ol.status = 'completed'
+          AND o.status <> 'cancelled'
+          AND (
+            ${supervisorOnly} = false
+            OR o.assigned_supervisor = ${user.id}::uuid
+            OR (
+              ${user.worker_id}::uuid IS NOT NULL
+              AND EXISTS (
+                SELECT 1
+                FROM order_worker_assignments owa
+                WHERE owa.order_id = o.id
+                  AND owa.worker_id = ${user.worker_id}::uuid
+                  AND owa.released_on IS NULL
+              )
+            )
+          )
+      ) ELSE 0 END AS completed_locations,
+
+      CASE WHEN ${canField} THEN (
+        SELECT count(*)::int
+        FROM order_locations ol
+        JOIN orders o ON o.id = ol.order_id
+        WHERE ol.status <> 'cancelled'
+          AND o.status <> 'cancelled'
+          AND (
+            ${supervisorOnly} = false
+            OR o.assigned_supervisor = ${user.id}::uuid
+            OR (
+              ${user.worker_id}::uuid IS NOT NULL
+              AND EXISTS (
+                SELECT 1
+                FROM order_worker_assignments owa
+                WHERE owa.order_id = o.id
+                  AND owa.worker_id = ${user.worker_id}::uuid
+                  AND owa.released_on IS NULL
+              )
+            )
+          )
+      ) ELSE 0 END AS total_locations,
+
+      CASE WHEN ${canCommercial} THEN (
+        SELECT COALESCE(sum(total_order_amount),0)
+        FROM orders
+        WHERE created_at >= date_trunc('month', now())
+          AND created_at < date_trunc('month', now()) + interval '1 month'
+      ) ELSE 0 END AS month_order_value,
+
+      CASE WHEN ${canFinance} THEN (
+        SELECT COALESCE(sum(total_amount - amount_paid),0)
+        FROM invoices
+        WHERE status <> 'cancelled'
+      ) ELSE 0 END AS customer_outstanding,
+
+      CASE WHEN ${canFinance} THEN (
+        SELECT COALESCE(sum(amount),0)
+        FROM expenses
+        WHERE expense_date >= date_trunc('month', CURRENT_DATE)::date
+          AND expense_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date
+      ) ELSE 0 END AS month_expenses,
+
+      CASE WHEN ${canFinance} THEN (
+        SELECT COALESCE(sum(amount),0)
+        FROM worker_payments
+        WHERE payment_date >= date_trunc('month', CURRENT_DATE)::date
+          AND payment_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date
+      ) ELSE 0 END AS month_worker_payments
   `;
+
   return rows[0];
 }
 
-export async function getRecentOrders() {
+export async function getRecentOrders(user: CurrentAppUser) {
+  const supervisorOnly = user.role === "supervisor";
+
   return sql`
-    SELECT o.id, o.order_no, o.campaign_name, o.status, o.due_date, o.total_order_amount,
-           c.company_name,
-           COALESCE((SELECT avg(ol.progress_percent) FROM order_locations ol WHERE ol.order_id=o.id),0)::int AS progress
+    SELECT
+      o.id,
+      o.order_no,
+      o.campaign_name,
+      o.status,
+      o.due_date,
+      o.total_order_amount,
+      c.company_name,
+      COALESCE((
+        SELECT avg(ol.progress_percent)
+        FROM order_locations ol
+        WHERE ol.order_id = o.id
+          AND ol.status <> 'cancelled'
+      ),0)::int AS progress
     FROM orders o
-    JOIN customers c ON c.id=o.customer_id
+    JOIN customers c ON c.id = o.customer_id
+    WHERE o.status <> 'cancelled'
+      AND (
+        ${supervisorOnly} = false
+        OR o.assigned_supervisor = ${user.id}::uuid
+        OR (
+          ${user.worker_id}::uuid IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM order_worker_assignments owa
+            WHERE owa.order_id = o.id
+              AND owa.worker_id = ${user.worker_id}::uuid
+              AND owa.released_on IS NULL
+          )
+        )
+      )
     ORDER BY o.created_at DESC
     LIMIT 8
   `;
