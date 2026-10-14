@@ -1,19 +1,161 @@
 import { sql } from "@/lib/db";
 import type { CurrentAppUser } from "@/lib/auth/authorization";
 
-export async function getDashboardMetrics() {
+export async function getDashboardMetrics(
+  user: Pick<CurrentAppUser, "id" | "role" | "worker_id">
+) {
+  const role = user.role;
+  const showSales = ["super_admin", "operations_manager", "sales"].includes(role);
+  const showField = ["super_admin", "operations_manager", "supervisor"].includes(role);
+  const showOperationsValue = ["super_admin", "operations_manager", "accounts"].includes(role);
+  const showFinance = ["super_admin", "accounts"].includes(role);
+  const isSupervisor = role === "supervisor";
+
   const rows = await sql`
     SELECT
-      (SELECT count(*)::int FROM leads WHERE status IN ('new','contacted','requirement_received','quotation_sent','negotiation')) AS open_leads,
-      (SELECT count(*)::int FROM quotations WHERE status IN ('draft','sent')) AS pending_quotations,
-      (SELECT count(*)::int FROM orders WHERE status NOT IN ('closed','cancelled','completed')) AS active_orders,
-      (SELECT count(*)::int FROM order_locations WHERE status = 'completed') AS completed_locations,
-      (SELECT count(*)::int FROM order_locations) AS total_locations,
-      (SELECT COALESCE(sum(total_order_amount),0) FROM orders WHERE created_at >= date_trunc('month', now()) AND created_at < date_trunc('month', now()) + interval '1 month') AS month_order_value,
-      (SELECT COALESCE(sum(total_amount - amount_paid),0) FROM invoices WHERE status <> 'cancelled') AS customer_outstanding,
-      (SELECT COALESCE(sum(amount),0) FROM expenses WHERE expense_date >= date_trunc('month', CURRENT_DATE)::date AND expense_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date) AS month_expenses,
-      (SELECT COALESCE(sum(amount),0) FROM worker_payments WHERE payment_date >= date_trunc('month', CURRENT_DATE)::date AND payment_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date) AS month_worker_payments
+      CASE WHEN ${showSales}::boolean THEN
+        (SELECT count(*)::int
+         FROM leads
+         WHERE status IN ('new','contacted','requirement_received','quotation_sent','negotiation'))
+      ELSE 0 END AS open_leads,
+
+      CASE WHEN ${showSales}::boolean THEN
+        (SELECT count(*)::int
+         FROM quotations
+         WHERE status IN ('draft','sent'))
+      ELSE 0 END AS pending_quotations,
+
+      CASE WHEN ${showField}::boolean THEN
+        (SELECT count(*)::int
+         FROM orders o
+         WHERE o.status NOT IN ('closed','cancelled','completed')
+           AND (
+             ${!isSupervisor}::boolean
+             OR o.assigned_supervisor = ${user.id}::uuid
+             OR (
+               ${user.worker_id}::uuid IS NOT NULL
+               AND EXISTS (
+                 SELECT 1
+                 FROM order_worker_assignments owa
+                 WHERE owa.order_id = o.id
+                   AND owa.worker_id = ${user.worker_id}::uuid
+                   AND owa.released_on IS NULL
+               )
+             )
+           ))
+      ELSE 0 END AS active_orders,
+
+      CASE WHEN ${showField}::boolean THEN
+        (SELECT count(*)::int
+         FROM order_locations ol
+         JOIN orders o ON o.id = ol.order_id
+         WHERE ol.status = 'completed'
+           AND (
+             ${!isSupervisor}::boolean
+             OR o.assigned_supervisor = ${user.id}::uuid
+             OR (
+               ${user.worker_id}::uuid IS NOT NULL
+               AND EXISTS (
+                 SELECT 1
+                 FROM order_worker_assignments owa
+                 WHERE owa.order_id = o.id
+                   AND owa.worker_id = ${user.worker_id}::uuid
+                   AND owa.released_on IS NULL
+                   AND (owa.order_location_id IS NULL OR owa.order_location_id = ol.id)
+               )
+             )
+           ))
+      ELSE 0 END AS completed_locations,
+
+      CASE WHEN ${showField}::boolean THEN
+        (SELECT count(*)::int
+         FROM order_locations ol
+         JOIN orders o ON o.id = ol.order_id
+         WHERE ol.status <> 'cancelled'
+           AND o.status <> 'cancelled'
+           AND (
+             ${!isSupervisor}::boolean
+             OR o.assigned_supervisor = ${user.id}::uuid
+             OR (
+               ${user.worker_id}::uuid IS NOT NULL
+               AND EXISTS (
+                 SELECT 1
+                 FROM order_worker_assignments owa
+                 WHERE owa.order_id = o.id
+                   AND owa.worker_id = ${user.worker_id}::uuid
+                   AND owa.released_on IS NULL
+                   AND (owa.order_location_id IS NULL OR owa.order_location_id = ol.id)
+               )
+             )
+           ))
+      ELSE 0 END AS total_locations,
+
+      CASE WHEN ${showOperationsValue}::boolean THEN
+        (SELECT COALESCE(sum(total_order_amount),0)
+         FROM orders
+         WHERE created_at >= date_trunc('month', now())
+           AND created_at < date_trunc('month', now()) + interval '1 month'
+           AND status <> 'cancelled')
+      ELSE 0 END AS month_order_value,
+
+      CASE WHEN ${showFinance}::boolean THEN
+        (SELECT COALESCE(sum(total_amount - amount_paid),0)
+         FROM invoices
+         WHERE status <> 'cancelled')
+      ELSE 0 END AS customer_outstanding,
+
+      CASE WHEN ${showFinance}::boolean THEN
+        (SELECT COALESCE(sum(amount),0)
+         FROM expenses
+         WHERE expense_date >= date_trunc('month', CURRENT_DATE)::date
+           AND expense_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date)
+      ELSE 0 END AS month_expenses,
+
+      CASE WHEN ${showFinance}::boolean THEN
+        (SELECT COALESCE(sum(amount),0)
+         FROM worker_payments
+         WHERE payment_date >= date_trunc('month', CURRENT_DATE)::date
+           AND payment_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date)
+      ELSE 0 END AS month_worker_payments,
+
+      CASE WHEN ${showSales}::boolean THEN
+        (SELECT count(*)::int
+         FROM leads
+         WHERE next_follow_up_at < now()
+           AND status NOT IN ('won','lost'))
+      ELSE 0 END AS overdue_followups,
+
+      CASE WHEN ${showField}::boolean THEN
+        (SELECT count(*)::int
+         FROM order_locations ol
+         JOIN orders o ON o.id = ol.order_id
+         WHERE ol.status = 'blocked'
+           AND o.status <> 'cancelled'
+           AND (
+             ${!isSupervisor}::boolean
+             OR o.assigned_supervisor = ${user.id}::uuid
+             OR (
+               ${user.worker_id}::uuid IS NOT NULL
+               AND EXISTS (
+                 SELECT 1
+                 FROM order_worker_assignments owa
+                 WHERE owa.order_id = o.id
+                   AND owa.worker_id = ${user.worker_id}::uuid
+                   AND owa.released_on IS NULL
+                   AND (owa.order_location_id IS NULL OR owa.order_location_id = ol.id)
+               )
+             )
+           ))
+      ELSE 0 END AS blocked_locations,
+
+      CASE WHEN ${showFinance}::boolean THEN
+        (SELECT count(*)::int
+         FROM invoices
+         WHERE due_date < CURRENT_DATE
+           AND status NOT IN ('paid','cancelled'))
+      ELSE 0 END AS overdue_invoices
   `;
+
   return rows[0];
 }
 
