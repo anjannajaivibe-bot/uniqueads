@@ -18,18 +18,21 @@ export async function getWorkerList() {
       COALESCE(a.agreed_total, 0) AS agreed_total,
       COALESCE(p.paid_total, 0) AS paid_total
     FROM workers w
-    LEFT JOIN LATERAL (
+    LEFT JOIN (
       SELECT
-        count(*) FILTER (WHERE owa.released_on IS NULL) AS active_assignments,
-        COALESCE(sum(owa.agreed_amount), 0) AS agreed_total
-      FROM order_worker_assignments owa
-      WHERE owa.worker_id = w.id
-    ) a ON true
-    LEFT JOIN LATERAL (
-      SELECT COALESCE(sum(wp.amount), 0) AS paid_total
-      FROM worker_payments wp
-      WHERE wp.worker_id = w.id
-    ) p ON true
+        worker_id,
+        count(*) FILTER (WHERE released_on IS NULL) AS active_assignments,
+        COALESCE(sum(agreed_amount), 0) AS agreed_total
+      FROM order_worker_assignments
+      GROUP BY worker_id
+    ) a ON a.worker_id = w.id
+    LEFT JOIN (
+      SELECT
+        worker_id,
+        COALESCE(sum(amount), 0) AS paid_total
+      FROM worker_payments
+      GROUP BY worker_id
+    ) p ON p.worker_id = w.id
     ORDER BY
       CASE WHEN w.is_active THEN 0 ELSE 1 END,
       w.name
