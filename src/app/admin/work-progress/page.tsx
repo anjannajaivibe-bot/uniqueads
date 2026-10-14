@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHeader, StatCard } from "@/components/ui";
+import { requireAppUser } from "@/lib/auth/authorization";
 import {
   getWorkProgressCounts,
   getWorkProgressOverview,
@@ -23,9 +24,10 @@ function date(value: any) {
 }
 
 export default async function WorkProgressPage() {
+  const currentUser = await requireAppUser();
   const [rows, counts] = await Promise.all([
-    getWorkProgressOverview(),
-    getWorkProgressCounts(),
+    getWorkProgressOverview(currentUser),
+    getWorkProgressCounts(currentUser),
   ]);
 
   const groups = new Map<string, any>();
@@ -49,7 +51,7 @@ export default async function WorkProgressPage() {
     <>
       <PageHeader
         title="Work Progress"
-        description="Field execution control with location-wise progress, site proof photos, GPS and quality checks."
+        description={currentUser.role === "supervisor" ? "Your assigned locations with progress, live photo proof, GPS and quality checks." : "Field execution control with location-wise progress, site proof photos, GPS and quality checks."}
       />
 
       <div className="lead-stats">
