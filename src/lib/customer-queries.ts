@@ -20,25 +20,28 @@ export async function getCustomerList() {
       COALESCE(i.invoice_total, 0) AS invoice_total,
       COALESCE(p.received_total, 0) AS received_total
     FROM customers c
-    LEFT JOIN LATERAL (
+    LEFT JOIN (
       SELECT
-        count(*) AS order_count,
-        COALESCE(sum(ord.total_order_amount), 0) AS order_value
-      FROM orders ord
-      WHERE ord.customer_id = c.id
-        AND ord.status <> 'cancelled'
-    ) o ON true
-    LEFT JOIN LATERAL (
-      SELECT COALESCE(sum(inv.total_amount), 0) AS invoice_total
-      FROM invoices inv
-      WHERE inv.customer_id = c.id
-        AND inv.status <> 'cancelled'
-    ) i ON true
-    LEFT JOIN LATERAL (
-      SELECT COALESCE(sum(cp.amount), 0) AS received_total
-      FROM customer_payments cp
-      WHERE cp.customer_id = c.id
-    ) p ON true
+        customer_id,
+        count(*) FILTER (WHERE status <> 'cancelled') AS order_count,
+        COALESCE(sum(total_order_amount) FILTER (WHERE status <> 'cancelled'), 0) AS order_value
+      FROM orders
+      GROUP BY customer_id
+    ) o ON o.customer_id = c.id
+    LEFT JOIN (
+      SELECT
+        customer_id,
+        COALESCE(sum(total_amount) FILTER (WHERE status <> 'cancelled'), 0) AS invoice_total
+      FROM invoices
+      GROUP BY customer_id
+    ) i ON i.customer_id = c.id
+    LEFT JOIN (
+      SELECT
+        customer_id,
+        COALESCE(sum(amount), 0) AS received_total
+      FROM customer_payments
+      GROUP BY customer_id
+    ) p ON p.customer_id = c.id
     ORDER BY
       CASE WHEN c.is_active THEN 0 ELSE 1 END,
       c.company_name
