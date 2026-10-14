@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 
 type WorkLocation = {
   id: string;
@@ -29,19 +30,24 @@ type PositionData = {
 export function LiveCaptureClient({
   locations,
   username,
+  initialLocationId,
 }: {
   locations: WorkLocation[];
   username: string;
+  initialLocationId?: string;
 }) {
+  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const initialLocation =
+    locations.find((item) => item.id === initialLocationId) || locations[0];
 
   const [selectedLocationId, setSelectedLocationId] = useState(
-    locations[0]?.id || ""
+    initialLocation?.id || ""
   );
   const [photoType, setPhotoType] = useState("during");
   const [progress, setProgress] = useState(
-    locations[0]?.progress_percent || 0
+    initialLocation?.progress_percent || 0
   );
   const [note, setNote] = useState("");
   const [position, setPosition] = useState<PositionData | null>(null);
@@ -296,6 +302,8 @@ export function LiveCaptureClient({
         URL.revokeObjectURL(previewUrl);
         setPreviewUrl(null);
       }
+
+      router.refresh();
     } catch (error) {
       setStatus(
         error instanceof Error ? error.message : "Unable to upload photo."
