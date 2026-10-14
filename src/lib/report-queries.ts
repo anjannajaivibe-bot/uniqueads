@@ -258,16 +258,26 @@ export async function getOrderProfitabilityReport(range: ReportRange) {
 
 export async function getStatePerformance(range: ReportRange) {
   return sql`
+    WITH scoped_locations AS (
+      SELECT
+        o.id AS order_id,
+        o.total_order_amount,
+        COALESCE(NULLIF(btrim(ol.state), ''), 'Not set') AS state,
+        count(*) OVER (PARTITION BY o.id) AS location_count
+      FROM orders o
+      JOIN order_locations ol ON ol.order_id = o.id
+      WHERE o.created_at >= ${range.from}::date
+        AND o.created_at < (${range.to}::date + interval '1 day')
+        AND o.status <> 'cancelled'
+        AND ol.status <> 'cancelled'
+    )
     SELECT
-      COALESCE(c.state, 'Not set') AS state,
-      count(DISTINCT o.id)::int AS order_count,
-      COALESCE(sum(o.total_order_amount), 0) AS order_value
-    FROM orders o
-    JOIN customers c ON c.id = o.customer_id
-    WHERE o.created_at >= ${range.from}::date
-          AND created_at < (${range.to}::date + interval '1 day')
-      AND o.status <> 'cancelled'
-    GROUP BY COALESCE(c.state, 'Not set')
+      state,
+      count(DISTINCT order_id)::int AS order_count,
+      count(*)::int AS location_count,
+      COALESCE(sum(total_order_amount / NULLIF(location_count, 0)), 0) AS order_value
+    FROM scoped_locations
+    GROUP BY state
     ORDER BY order_value DESC
   `;
 }
