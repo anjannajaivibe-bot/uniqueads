@@ -1,6 +1,11 @@
 import { sql } from "@/lib/db";
+import type { CurrentAppUser } from "@/lib/auth/authorization";
 
-export async function getOrderList() {
+type OrderScope = Pick<CurrentAppUser, "id" | "role" | "worker_id">;
+
+export async function getOrderList(user: OrderScope) {
+  const isSupervisor = user.role === "supervisor";
+
   return sql`
     SELECT
       o.id,
@@ -24,14 +29,29 @@ export async function getOrderList() {
     FROM orders o
     JOIN customers c ON c.id = o.customer_id
     LEFT JOIN app_users s ON s.id = o.assigned_supervisor
-    LEFT JOIN LATERAL (
+    LEFT JOIN (
       SELECT
+        order_id,
         count(*) AS location_count,
-        count(*) FILTER (WHERE ol.status = 'completed') AS completed_locations,
-        ROUND(COALESCE(AVG(ol.progress_percent), 0)) AS progress_percent
-      FROM order_locations ol
-      WHERE ol.order_id = o.id
-    ) loc ON true
+        count(*) FILTER (WHERE status = 'completed') AS completed_locations,
+        ROUND(COALESCE(AVG(progress_percent), 0)) AS progress_percent
+      FROM order_locations
+      GROUP BY order_id
+    ) loc ON loc.order_id = o.id
+    WHERE (
+      ${!isSupervisor}::boolean
+      OR o.assigned_supervisor = ${user.id}::uuid
+      OR (
+        ${user.worker_id}::uuid IS NOT NULL
+        AND EXISTS (
+          SELECT 1
+          FROM order_worker_assignments owa
+          WHERE owa.order_id = o.id
+            AND owa.worker_id = ${user.worker_id}::uuid
+            AND owa.released_on IS NULL
+        )
+      )
+    )
     ORDER BY
       CASE
         WHEN o.due_date IS NOT NULL
@@ -45,32 +65,52 @@ export async function getOrderList() {
   `;
 }
 
-export async function getOrderCounts() {
+export async function getOrderCounts(user: OrderScope) {
+  const isSupervisor = user.role === "supervisor";
+
   const rows = await sql`
     SELECT
       count(*) FILTER (
-        WHERE status NOT IN ('completed', 'invoiced', 'closed', 'cancelled')
+        WHERE o.status NOT IN ('completed', 'invoiced', 'closed', 'cancelled')
       )::int AS active_count,
       count(*) FILTER (
-        WHERE due_date IS NOT NULL
-          AND due_date < CURRENT_DATE
-          AND status NOT IN ('completed', 'invoiced', 'closed', 'cancelled')
+        WHERE o.due_date IS NOT NULL
+          AND o.due_date < CURRENT_DATE
+          AND o.status NOT IN ('completed', 'invoiced', 'closed', 'cancelled')
       )::int AS overdue_count,
       count(*) FILTER (
-        WHERE status IN ('completed', 'invoiced', 'closed')
-          AND date_trunc('month', COALESCE(completed_date, updated_at)::timestamp)
-              = date_trunc('month', CURRENT_DATE::timestamp)
+        WHERE o.status IN ('completed', 'invoiced', 'closed')
+          AND COALESCE(o.completed_date, o.updated_at::date)
+              >= date_trunc('month', CURRENT_DATE)::date
+          AND COALESCE(o.completed_date, o.updated_at::date)
+              < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date
       )::int AS completed_month_count,
-      COALESCE(sum(total_order_amount) FILTER (
-        WHERE date_trunc('month', created_at)
-              = date_trunc('month', now())
+      COALESCE(sum(o.total_order_amount) FILTER (
+        WHERE o.created_at >= date_trunc('month', now())
+          AND o.created_at < date_trunc('month', now()) + interval '1 month'
       ), 0) AS month_order_value
-    FROM orders
+    FROM orders o
+    WHERE (
+      ${!isSupervisor}::boolean
+      OR o.assigned_supervisor = ${user.id}::uuid
+      OR (
+        ${user.worker_id}::uuid IS NOT NULL
+        AND EXISTS (
+          SELECT 1
+          FROM order_worker_assignments owa
+          WHERE owa.order_id = o.id
+            AND owa.worker_id = ${user.worker_id}::uuid
+            AND owa.released_on IS NULL
+        )
+      )
+    )
   `;
   return rows[0];
 }
 
-export async function getOrderById(id: string) {
+export async function getOrderById(id: string, user: OrderScope) {
+  const isSupervisor = user.role === "supervisor";
+
   const rows = await sql`
     SELECT
       o.*,
@@ -94,6 +134,20 @@ export async function getOrderById(id: string) {
     LEFT JOIN app_users s ON s.id = o.assigned_supervisor
     LEFT JOIN app_users creator ON creator.id = o.created_by
     WHERE o.id = ${id}::uuid
+      AND (
+        ${!isSupervisor}::boolean
+        OR o.assigned_supervisor = ${user.id}::uuid
+        OR (
+          ${user.worker_id}::uuid IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM order_worker_assignments owa
+            WHERE owa.order_id = o.id
+              AND owa.worker_id = ${user.worker_id}::uuid
+              AND owa.released_on IS NULL
+          )
+        )
+      )
     LIMIT 1
   `;
   return rows[0] ?? null;
@@ -105,11 +159,14 @@ export async function getOrderLocations(orderId: string) {
       ol.*,
       COALESCE(assign.worker_count, 0)::int AS worker_count
     FROM order_locations ol
-    LEFT JOIN LATERAL (
-      SELECT count(DISTINCT owa.worker_id) AS worker_count
-      FROM order_worker_assignments owa
-      WHERE owa.order_location_id = ol.id
-    ) assign ON true
+    LEFT JOIN (
+      SELECT
+        order_location_id,
+        count(DISTINCT worker_id) FILTER (WHERE released_on IS NULL) AS worker_count
+      FROM order_worker_assignments
+      WHERE order_location_id IS NOT NULL
+      GROUP BY order_location_id
+    ) assign ON assign.order_location_id = ol.id
     WHERE ol.order_id = ${orderId}::uuid
     ORDER BY
       CASE ol.status
