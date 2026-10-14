@@ -13,6 +13,8 @@ export type CurrentAppUser = {
   auth_user_id: string | null;
   full_name: string;
   email: string | null;
+  username: string | null;
+  worker_id: string | null;
   role: AppRole;
   is_active: boolean;
 };
