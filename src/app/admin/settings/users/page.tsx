@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { neon } from "@neondatabase/serverless";
+import { PageHeader } from "@/components/ui";
 import { getPasswordSessionAppUser } from "@/lib/auth/password-session";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +13,19 @@ const roleLabel: Record<string, string> = {
   sales: "Sales",
   accounts: "Accounts",
 };
+
+function dateTime(value: any) {
+  if (!value) return "Never";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "Never";
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+}
 
 export default async function UsersAccessPage({
   searchParams,
@@ -45,7 +60,7 @@ export default async function UsersAccessPage({
         full_name
     `,
     sql`
-      select id, worker_code, name, skill, is_active
+      select id, worker_code, name, skill
       from public.workers
       where is_active = true
       order by name
@@ -55,264 +70,213 @@ export default async function UsersAccessPage({
   const params = await searchParams;
 
   return (
-    <div style={{ display: "grid", gap: 24 }}>
-      <div>
-        <p style={{ margin: 0, color: "#f47b20", fontWeight: 850 }}>
-          Settings
-        </p>
-        <h1 style={{ margin: "5px 0" }}>Users & Access</h1>
-        <p style={{ margin: 0, color: "#667085" }}>
-          Create team credentials, assign roles and reset access.
-        </p>
-      </div>
+    <>
+      <PageHeader
+        title="Users & Access"
+        description="Create team credentials, assign roles, link field workers and control account access."
+        action={
+          <Link href="/admin/settings" className="button button-secondary">
+            Back to Settings
+          </Link>
+        }
+      />
 
       {params.success ? (
-        <div style={{
-          padding: 12,
-          borderRadius: 10,
-          background: "#ecfdf3",
-          color: "#067647",
-          fontWeight: 750,
-        }}>
-          {params.success}
-        </div>
+        <div className="form-message form-message-success">{params.success}</div>
       ) : null}
 
       {params.error ? (
-        <div style={{
-          padding: 12,
-          borderRadius: 10,
-          background: "#fff0ee",
-          color: "#9d2c20",
-          fontWeight: 750,
-        }}>
-          {params.error}
-        </div>
+        <div className="form-message form-message-error">{params.error}</div>
       ) : null}
 
-      <section style={{
-        background: "white",
-        border: "1px solid #e2e7ef",
-        borderRadius: 14,
-        padding: 20,
-      }}>
-        <h2 style={{ marginTop: 0 }}>Create Team Login</h2>
+      <section className="form-card users-create-card">
+        <div className="form-section-title">
+          <div>
+            <h2>Create Team Login</h2>
+            <p>Every staff member gets an individual username for auditability.</p>
+          </div>
+        </div>
 
-        <form
-          method="post"
-          action="/api/admin/users/manage"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-            gap: 14,
-          }}
-        >
+        <form method="post" action="/api/admin/users/manage">
           <input type="hidden" name="action" value="create" />
+          <div className="form-grid">
+            <label>
+              <span>Full Name *</span>
+              <input name="full_name" required />
+            </label>
+            <label>
+              <span>Username *</span>
+              <input
+                name="username"
+                required
+                minLength={3}
+                maxLength={40}
+                autoComplete="off"
+              />
+            </label>
+            <label>
+              <span>Initial Password *</span>
+              <input
+                name="password"
+                type="password"
+                minLength={8}
+                required
+                autoComplete="new-password"
+              />
+            </label>
+            <label>
+              <span>Role *</span>
+              <select name="role" required defaultValue="sales">
+                <option value="operations_manager">Operations Manager</option>
+                <option value="supervisor">Supervisor / Field Team</option>
+                <option value="sales">Sales</option>
+                <option value="accounts">Accounts</option>
+                <option value="super_admin">Super Admin</option>
+              </select>
+            </label>
+            <label>
+              <span>Team Name</span>
+              <input name="team_name" placeholder="Example: Telangana Field Team" />
+            </label>
+            <label>
+              <span>Phone</span>
+              <input name="phone" inputMode="tel" />
+            </label>
+            <label>
+              <span>Email, optional</span>
+              <input name="email" type="email" />
+            </label>
+            <label>
+              <span>Link to Worker, optional</span>
+              <select name="worker_id" defaultValue="">
+                <option value="">Not linked</option>
+                {workers.map((worker: any) => (
+                  <option key={worker.id} value={worker.id}>
+                    {worker.worker_code
+                      ? `${worker.worker_code} - ${worker.name}`
+                      : worker.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
-          <label>
-            <div>Full Name</div>
-            <input name="full_name" required style={{ width: "100%" }} />
-          </label>
-
-          <label>
-            <div>Username</div>
-            <input name="username" required style={{ width: "100%" }} />
-          </label>
-
-          <label>
-            <div>Password</div>
-            <input
-              name="password"
-              type="password"
-              minLength={8}
-              required
-              style={{ width: "100%" }}
-            />
-          </label>
-
-          <label>
-            <div>Role</div>
-            <select name="role" required style={{ width: "100%" }}>
-              <option value="operations_manager">Operations Manager</option>
-              <option value="supervisor">Supervisor / Field Team</option>
-              <option value="sales">Sales</option>
-              <option value="accounts">Accounts</option>
-              <option value="super_admin">Super Admin</option>
-            </select>
-          </label>
-
-          <label>
-            <div>Team Name</div>
-            <input
-              name="team_name"
-              placeholder="Example: Telangana Field Team"
-              style={{ width: "100%" }}
-            />
-          </label>
-
-          <label>
-            <div>Phone</div>
-            <input name="phone" style={{ width: "100%" }} />
-          </label>
-
-          <label>
-            <div>Email, optional</div>
-            <input name="email" type="email" style={{ width: "100%" }} />
-          </label>
-
-          <label>
-            <div>Link to Worker, optional</div>
-            <select name="worker_id" style={{ width: "100%" }}>
-              <option value="">Not linked</option>
-              {workers.map((worker: any) => (
-                <option key={worker.id} value={worker.id}>
-                  {worker.worker_code
-                    ? `${worker.worker_code} - ${worker.name}`
-                    : worker.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div style={{ alignSelf: "end" }}>
-            <button
-              type="submit"
-              style={{
-                border: 0,
-                borderRadius: 9,
-                background: "#f47b20",
-                color: "white",
-                fontWeight: 850,
-                padding: "11px 18px",
-                cursor: "pointer",
-              }}
-            >
+          <div className="form-actions">
+            <button type="submit" className="button button-primary">
               Create Login
             </button>
           </div>
         </form>
       </section>
 
-      <section style={{
-        background: "white",
-        border: "1px solid #e2e7ef",
-        borderRadius: 14,
-        padding: 20,
-        overflowX: "auto",
-      }}>
-        <h2 style={{ marginTop: 0 }}>Existing Users</h2>
+      <section className="panel users-access-panel">
+        <div className="panel-head">
+          <div>
+            <h2>Existing Users</h2>
+            <p>Update role/team links, reset passwords or disable access.</p>
+          </div>
+          <strong>{users.length} users</strong>
+        </div>
 
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            minWidth: 900,
-          }}
-        >
-          <thead>
-            <tr>
-              {[
-                "Name",
-                "Username",
-                "Role",
-                "Team",
-                "Status",
-                "Last Login",
-                "Password",
-                "Access",
-              ].map((heading) => (
-                <th
-                  key={heading}
-                  style={{
-                    textAlign: "left",
-                    padding: "10px 8px",
-                    borderBottom: "1px solid #e8ebf0",
-                  }}
+        <div className="users-access-list">
+          {users.map((user: any) => (
+            <article className="user-access-card" key={user.id}>
+              <div className="user-access-summary">
+                <div>
+                  <strong>{user.full_name}</strong>
+                  <span>@{user.username || "not-set"}</span>
+                </div>
+                <span
+                  className={`status ${
+                    user.is_active ? "status-completed" : "status-cancelled"
+                  }`}
                 >
-                  {heading}
-                </th>
-              ))}
-            </tr>
-          </thead>
-
-          <tbody>
-            {users.map((user: any) => (
-              <tr key={user.id}>
-                <td style={{ padding: 8 }}>{user.full_name}</td>
-                <td style={{ padding: 8 }}>
-                  <strong>{user.username || "Not set"}</strong>
-                </td>
-                <td style={{ padding: 8 }}>
-                  {roleLabel[user.role] || user.role}
-                </td>
-                <td style={{ padding: 8 }}>
-                  {user.team_name || "-"}
-                </td>
-                <td style={{ padding: 8 }}>
                   {user.is_active ? "Active" : "Disabled"}
-                </td>
-                <td style={{ padding: 8 }}>
-                  {user.last_login_at
-                    ? new Date(user.last_login_at).toLocaleString("en-IN")
-                    : "Never"}
-                </td>
-                <td style={{ padding: 8 }}>
-                  <form
-                    method="post"
-                    action="/api/admin/users/manage"
-                    style={{ display: "flex", gap: 6 }}
-                  >
-                    <input
-                      type="hidden"
-                      name="action"
-                      value="reset_password"
-                    />
-                    <input
-                      type="hidden"
-                      name="user_id"
-                      value={user.id}
-                    />
-                    <input
-                      name="password"
-                      type="password"
-                      minLength={8}
-                      required
-                      placeholder="New password"
-                      style={{ width: 140 }}
-                    />
-                    <button type="submit">Reset</button>
-                  </form>
-                </td>
-                <td style={{ padding: 8 }}>
-                  <form method="post" action="/api/admin/users/manage">
-                    <input
-                      type="hidden"
-                      name="action"
-                      value="toggle_active"
-                    />
-                    <input
-                      type="hidden"
-                      name="user_id"
-                      value={user.id}
-                    />
-                    <button
-                      type="submit"
-                      disabled={user.id === currentUser.id}
-                    >
-                      {user.is_active ? "Disable" : "Enable"}
-                    </button>
-                  </form>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+                </span>
+              </div>
 
-      <p style={{ margin: 0 }}>
-        <a href="/admin/settings">← Back to Settings</a>
-      </p>
-    </div>
+              <div className="user-access-meta">
+                <span>{roleLabel[user.role] || user.role}</span>
+                <span>{user.team_name || "No team"}</span>
+                <span>Last login: {dateTime(user.last_login_at)}</span>
+              </div>
+
+              <form
+                method="post"
+                action="/api/admin/users/manage"
+                className="user-profile-form"
+              >
+                <input type="hidden" name="action" value="update_profile" />
+                <input type="hidden" name="user_id" value={user.id} />
+                <label>
+                  <span>Full Name</span>
+                  <input name="full_name" defaultValue={user.full_name} required />
+                </label>
+                <label>
+                  <span>Role</span>
+                  <select name="role" defaultValue={user.role}>
+                    <option value="super_admin">Super Admin</option>
+                    <option value="operations_manager">Operations Manager</option>
+                    <option value="supervisor">Supervisor / Field Team</option>
+                    <option value="sales">Sales</option>
+                    <option value="accounts">Accounts</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Team</span>
+                  <input name="team_name" defaultValue={user.team_name || ""} />
+                </label>
+                <label>
+                  <span>Linked Worker</span>
+                  <select name="worker_id" defaultValue={user.worker_id || ""}>
+                    <option value="">Not linked</option>
+                    {workers.map((worker: any) => (
+                      <option key={worker.id} value={worker.id}>
+                        {worker.worker_code
+                          ? `${worker.worker_code} - ${worker.name}`
+                          : worker.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button type="submit" className="button button-secondary">
+                  Save Profile
+                </button>
+              </form>
+
+              <div className="user-access-actions">
+                <form method="post" action="/api/admin/users/manage">
+                  <input type="hidden" name="action" value="reset_password" />
+                  <input type="hidden" name="user_id" value={user.id} />
+                  <input
+                    name="password"
+                    type="password"
+                    minLength={8}
+                    required
+                    autoComplete="new-password"
+                    placeholder="New password"
+                  />
+                  <button type="submit" className="button button-secondary">
+                    Reset Password
+                  </button>
+                </form>
+
+                <form method="post" action="/api/admin/users/manage">
+                  <input type="hidden" name="action" value="toggle_active" />
+                  <input type="hidden" name="user_id" value={user.id} />
+                  <button
+                    type="submit"
+                    className="button button-secondary"
+                    disabled={user.id === currentUser.id}
+                  >
+                    {user.is_active ? "Disable Access" : "Enable Access"}
+                  </button>
+                </form>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }
-
