@@ -18,15 +18,15 @@ export async function getFinanceSummary() {
       COALESCE((
         SELECT sum(amount)
         FROM customer_payments
-        WHERE date_trunc('month', payment_date::timestamp)
-          = date_trunc('month', CURRENT_DATE::timestamp)
+        WHERE payment_date >= date_trunc('month', CURRENT_DATE)::date
+          AND payment_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date
       ), 0) AS collections_month,
 
       COALESCE((
         SELECT sum(amount)
         FROM expenses
-        WHERE date_trunc('month', expense_date::timestamp)
-          = date_trunc('month', CURRENT_DATE::timestamp)
+        WHERE expense_date >= date_trunc('month', CURRENT_DATE)::date
+          AND expense_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date
       ), 0) AS expenses_month,
 
       COALESCE((
@@ -106,7 +106,7 @@ export async function getExpenseList() {
     LEFT JOIN orders o ON o.id = e.order_id
     LEFT JOIN app_users u ON u.id = e.entered_by
     ORDER BY e.expense_date DESC, e.created_at DESC
-    LIMIT 500
+    LIMIT 50
   `;
 }
 
@@ -164,21 +164,24 @@ export async function getOrderProfitability() {
       ) AS estimated_profit
     FROM orders o
     JOIN customers c ON c.id = o.customer_id
-    LEFT JOIN LATERAL (
-      SELECT COALESCE(sum(amount), 0) AS collected
+    LEFT JOIN (
+      SELECT order_id, COALESCE(sum(amount), 0) AS collected
       FROM customer_payments
-      WHERE order_id = o.id
-    ) cp ON true
-    LEFT JOIN LATERAL (
-      SELECT COALESCE(sum(amount), 0) AS expenses
+      WHERE order_id IS NOT NULL
+      GROUP BY order_id
+    ) cp ON cp.order_id = o.id
+    LEFT JOIN (
+      SELECT order_id, COALESCE(sum(amount), 0) AS expenses
       FROM expenses
-      WHERE order_id = o.id
-    ) ex ON true
-    LEFT JOIN LATERAL (
-      SELECT COALESCE(sum(amount), 0) AS worker_cost
+      WHERE order_id IS NOT NULL
+      GROUP BY order_id
+    ) ex ON ex.order_id = o.id
+    LEFT JOIN (
+      SELECT order_id, COALESCE(sum(amount), 0) AS worker_cost
       FROM worker_payments
-      WHERE order_id = o.id
-    ) wp ON true
+      WHERE order_id IS NOT NULL
+      GROUP BY order_id
+    ) wp ON wp.order_id = o.id
     WHERE o.status <> 'cancelled'
     ORDER BY o.created_at DESC
     LIMIT 250
