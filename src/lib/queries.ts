@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import type { CurrentAppUser } from "@/lib/auth/authorization";
 
 export async function getDashboardMetrics() {
   const rows = await sql`
@@ -8,21 +9,56 @@ export async function getDashboardMetrics() {
       (SELECT count(*)::int FROM orders WHERE status NOT IN ('closed','cancelled','completed')) AS active_orders,
       (SELECT count(*)::int FROM order_locations WHERE status = 'completed') AS completed_locations,
       (SELECT count(*)::int FROM order_locations) AS total_locations,
-      (SELECT COALESCE(sum(total_order_amount),0) FROM orders WHERE date_trunc('month', created_at) = date_trunc('month', now())) AS month_order_value,
+      (SELECT COALESCE(sum(total_order_amount),0) FROM orders WHERE created_at >= date_trunc('month', now()) AND created_at < date_trunc('month', now()) + interval '1 month') AS month_order_value,
       (SELECT COALESCE(sum(total_amount - amount_paid),0) FROM invoices WHERE status <> 'cancelled') AS customer_outstanding,
-      (SELECT COALESCE(sum(amount),0) FROM expenses WHERE date_trunc('month', expense_date) = date_trunc('month', CURRENT_DATE)) AS month_expenses,
-      (SELECT COALESCE(sum(amount),0) FROM worker_payments WHERE date_trunc('month', payment_date) = date_trunc('month', CURRENT_DATE)) AS month_worker_payments
+      (SELECT COALESCE(sum(amount),0) FROM expenses WHERE expense_date >= date_trunc('month', CURRENT_DATE)::date AND expense_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date) AS month_expenses,
+      (SELECT COALESCE(sum(amount),0) FROM worker_payments WHERE payment_date >= date_trunc('month', CURRENT_DATE)::date AND payment_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date) AS month_worker_payments
   `;
   return rows[0];
 }
 
-export async function getRecentOrders() {
+export async function getRecentOrdersForUser(
+  user: Pick<CurrentAppUser, "id" | "role" | "worker_id">
+) {
+  if (!["super_admin", "operations_manager", "supervisor"].includes(user.role)) {
+    return [];
+  }
+
+  const isSupervisor = user.role === "supervisor";
+
   return sql`
-    SELECT o.id, o.order_no, o.campaign_name, o.status, o.due_date, o.total_order_amount,
-           c.company_name,
-           COALESCE((SELECT avg(ol.progress_percent) FROM order_locations ol WHERE ol.order_id=o.id),0)::int AS progress
+    SELECT
+      o.id,
+      o.order_no,
+      o.campaign_name,
+      o.status,
+      o.due_date,
+      o.total_order_amount,
+      c.company_name,
+      COALESCE(loc.progress, 0)::int AS progress
     FROM orders o
-    JOIN customers c ON c.id=o.customer_id
+    JOIN customers c ON c.id = o.customer_id
+    LEFT JOIN (
+      SELECT
+        order_id,
+        ROUND(COALESCE(AVG(progress_percent), 0))::int AS progress
+      FROM order_locations
+      GROUP BY order_id
+    ) loc ON loc.order_id = o.id
+    WHERE (
+      ${!isSupervisor}::boolean
+      OR o.assigned_supervisor = ${user.id}::uuid
+      OR (
+        ${user.worker_id}::uuid IS NOT NULL
+        AND EXISTS (
+          SELECT 1
+          FROM order_worker_assignments owa
+          WHERE owa.order_id = o.id
+            AND owa.worker_id = ${user.worker_id}::uuid
+            AND owa.released_on IS NULL
+        )
+      )
+    )
     ORDER BY o.created_at DESC
     LIMIT 8
   `;
