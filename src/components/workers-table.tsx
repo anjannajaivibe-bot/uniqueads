@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { TablePager } from "@/components/table-pager";
 
 type Row = {
   id: string;
@@ -34,6 +35,7 @@ export function WorkersTable({ rows }: { rows: Row[] }) {
   const [query, setQuery] = useState("");
   const [skill, setSkill] = useState("all");
   const [status, setStatus] = useState("active");
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -62,6 +64,14 @@ export function WorkersTable({ rows }: { rows: Row[] }) {
       );
     });
   }, [rows, query, skill, status]);
+
+  const pageSize = 50;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pagedRows = filtered.slice(
+    (safePage - 1) * pageSize,
+    safePage * pageSize
+  );
 
   return (
     <section className="panel">
@@ -125,7 +135,7 @@ export function WorkersTable({ rows }: { rows: Row[] }) {
                 </td>
               </tr>
             ) : (
-              filtered.map((row) => {
+              pagedRows.map((row) => {
                 const agreed = Number(row.agreed_total || 0);
                 const paid = Number(row.paid_total || 0);
                 const balance = Math.max(0, agreed - paid);
@@ -178,6 +188,12 @@ export function WorkersTable({ rows }: { rows: Row[] }) {
           </tbody>
         </table>
       </div>
+      <TablePager
+        page={safePage}
+        total={filtered.length}
+        pageSize={pageSize}
+        onPageChange={setPage}
+      />
     </section>
   );
 }
