@@ -335,6 +335,19 @@ export async function convertQuotationToOrder(formData: FormData) {
     throw new Error("Only an accepted quotation can be converted to an order.");
   }
 
+  const existingOrders = await sql`
+    SELECT id, order_no
+    FROM orders
+    WHERE quotation_id = ${quotationId}::uuid
+    LIMIT 1
+  `;
+
+  if (existingOrders[0]) {
+    throw new Error(
+      `This quotation is already linked to order ${existingOrders[0].order_no}.`
+    );
+  }
+
   let customerId = quotation.customer_id
     ? String(quotation.customer_id)
     : quotation.lead_customer_id
