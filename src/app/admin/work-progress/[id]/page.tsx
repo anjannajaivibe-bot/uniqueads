@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader, Status } from "@/components/ui";
-import { WorkPhotoUploader } from "@/components/work-photo-uploader";
+import { requireAppUser } from "@/lib/auth/authorization";
 import { WorkUpdateForm } from "@/components/work-update-form";
 import { presignWorkPhotoDownload } from "@/lib/storage";
 import {
@@ -49,7 +49,8 @@ export default async function WorkLocationPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const location = await getWorkLocation(id);
+  const currentUser = await requireAppUser();
+  const location = await getWorkLocation(id, currentUser);
 
   if (!location) notFound();
   const l = location as any;
@@ -146,14 +147,16 @@ export default async function WorkLocationPage({
           <article className="form-card">
             <div className="form-section-title">
               <div>
-                <h2>Upload Site Photo Proof</h2>
-                <p>Photos upload directly to the private Neon Object Storage bucket. Database credentials never reach the browser.</p>
+                <h2>Live Site Photo Proof</h2>
+                <p>
+                  Work proof is camera-only with live GPS, device capture time,
+                  server timestamp and logged-in username. Gallery uploads are disabled.
+                </p>
               </div>
             </div>
-            <WorkPhotoUploader
-              orderId={String(l.order_id)}
-              locationId={String(l.id)}
-            />
+            <Link href="/admin/work-progress/live-capture" className="button button-primary">
+              Open Live Photo Capture
+            </Link>
           </article>
 
           <article className="panel work-gallery-panel">
