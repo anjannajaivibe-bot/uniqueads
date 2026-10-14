@@ -14,12 +14,14 @@ export async function getAppUsers() {
   return sql`
     SELECT
       id,
-      auth_user_id,
+      username,
       full_name,
       email,
       phone,
       role,
       is_active,
+      worker_id,
+      last_login_at,
       created_at,
       updated_at
     FROM app_users
