@@ -65,6 +65,12 @@ export async function addWorkUpdate(formData: FormData) {
     throw new Error("Location and a valid work status are required.");
   }
 
+  if (updateStatus === "completed") {
+    throw new Error(
+      "Completion must be recorded through Live Photo Capture with GPS proof."
+    );
+  }
+
   if (latitude !== null && (latitude < -90 || latitude > 90)) {
     throw new Error("Invalid latitude.");
   }
