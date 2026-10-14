@@ -23,6 +23,33 @@ function redirectToUsers(
   return NextResponse.redirect(url, 303);
 }
 
+async function logUserAccessAction(
+  sql: any,
+  actorUserId: string,
+  targetUserId: string,
+  action: string,
+  description: string,
+  metadata: Record<string, unknown> = {}
+) {
+  await sql`
+    insert into public.activity_logs (
+      actor_user_id,
+      action,
+      entity_type,
+      entity_id,
+      description,
+      metadata
+    ) values (
+      ${actorUserId},
+      ${action},
+      'app_user',
+      ${targetUserId}::uuid,
+      ${description},
+      ${JSON.stringify(metadata)}::jsonb
+    )
+  `;
+}
+
 export async function POST(request: NextRequest) {
   const currentUser = await getPasswordSessionAppUser();
 
@@ -84,7 +111,7 @@ export async function POST(request: NextRequest) {
 
       const passwordHash = hashPassword(password);
 
-      await sql`
+      const created = await sql`
         insert into public.app_users
           (
             full_name,
@@ -111,7 +138,17 @@ export async function POST(request: NextRequest) {
             true,
             now()
           )
+        returning id
       `;
+
+      await logUserAccessAction(
+        sql,
+        String(currentUser.id),
+        String(created[0].id),
+        "app_user_created",
+        `Login created for ${username}.`,
+        { role, team_name: teamName, worker_id: workerId }
+      );
 
       return redirectToUsers(request, "success", "User created.");
     }
@@ -200,6 +237,15 @@ export async function POST(request: NextRequest) {
         where id = ${userId}
       `;
 
+      await logUserAccessAction(
+        sql,
+        String(currentUser.id),
+        userId,
+        "app_user_profile_updated",
+        `Access profile updated for ${fullName}.`,
+        { role, team_name: teamName, worker_id: workerId }
+      );
+
       return redirectToUsers(request, "success", "User profile updated.");
     }
 
@@ -224,6 +270,14 @@ export async function POST(request: NextRequest) {
         where id = ${userId}
       `;
 
+      await logUserAccessAction(
+        sql,
+        String(currentUser.id),
+        userId,
+        "app_user_password_reset",
+        "Password reset by Super Admin."
+      );
+
       return redirectToUsers(
         request,
         "success",
@@ -240,12 +294,26 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      await sql`
+      const toggled = await sql`
         update public.app_users
         set is_active = not is_active,
             updated_at = now()
         where id = ${userId}
+        returning full_name, is_active
       `;
+
+      if (!toggled[0]) {
+        return redirectToUsers(request, "error", "User was not found.");
+      }
+
+      await logUserAccessAction(
+        sql,
+        String(currentUser.id),
+        userId,
+        "app_user_access_toggled",
+        `${toggled[0].full_name} access ${toggled[0].is_active ? "enabled" : "disabled"}.`,
+        { is_active: Boolean(toggled[0].is_active) }
+      );
 
       return redirectToUsers(
         request,
