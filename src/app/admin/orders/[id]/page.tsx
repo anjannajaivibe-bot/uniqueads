@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader, Status } from "@/components/ui";
+import { requireAppUser } from "@/lib/auth/authorization";
 import {
   getActiveWorkers,
   getOrderActivity,
@@ -80,19 +81,23 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
-  const [order, locations, assignments, activity, supervisors, workers] =
-    await Promise.all([
-      getOrderById(id),
-      getOrderLocations(id),
-      getOrderAssignments(id),
-      getOrderActivity(id),
-      getOrderSupervisors(),
-      getActiveWorkers(),
-    ]);
+  const currentUser = await requireAppUser();
+  const order = await getOrderById(id, currentUser);
 
   if (!order) notFound();
   const o = order as any;
+  const canManage =
+    currentUser.role === "super_admin" ||
+    currentUser.role === "operations_manager";
+
+  const [locations, assignments, activity, supervisors, workers] =
+    await Promise.all([
+      getOrderLocations(id),
+      getOrderAssignments(id),
+      getOrderActivity(id),
+      canManage ? getOrderSupervisors() : Promise.resolve([]),
+      canManage ? getActiveWorkers() : Promise.resolve([]),
+    ]);
 
   const locationCount = locations.length;
   const completedLocations = locations.filter(
@@ -117,7 +122,7 @@ export default async function OrderDetailPage({
   const whatsapp = whatsappHref(o.whatsapp || o.phone, o.order_no);
 
   return (
-    <>
+    <div className={canManage ? undefined : "supervisor-readonly"}>
       <PageHeader
         title={o.order_no}
         description={`${o.company_name} · ${o.campaign_name}`}
@@ -147,6 +152,12 @@ export default async function OrderDetailPage({
           </div>
         }
       />
+
+      {!canManage ? (
+        <div className="role-notice">
+          <strong>Read-only field view.</strong> Planning, worker assignment and order-status controls are managed by Operations. Use Work Progress or Live Capture for field updates.
+        </div>
+      ) : null}
 
       <section className="panel order-hero-card">
         <div className="order-hero-head">
@@ -588,6 +599,6 @@ export default async function OrderDetailPage({
           </article>
         </aside>
       </div>
-    </>
+    </div>
   );
 }
