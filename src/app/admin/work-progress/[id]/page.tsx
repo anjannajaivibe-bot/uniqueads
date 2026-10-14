@@ -75,6 +75,12 @@ export default async function WorkLocationPage({
     quality_issue: photos.filter((photo) => photo.photo_type === "quality_issue"),
     other: photos.filter((photo) => photo.photo_type === "other"),
   };
+  const hasLiveGps = photos.some(
+    (photo: any) =>
+      Boolean(photo.is_live_capture) &&
+      photo.latitude != null &&
+      photo.longitude != null
+  );
 
   return (
     <>
@@ -201,14 +207,30 @@ export default async function WorkLocationPage({
                               />
                             </a>
                             <figcaption>
-                              <strong>{photo.caption || title}</strong>
+                              <div className="photo-proof-title">
+                                <strong>{photo.caption || title}</strong>
+                                {photo.is_live_capture ? (
+                                  <span className="live-proof-badge">LIVE PROOF</span>
+                                ) : (
+                                  <span className="legacy-proof-badge">Legacy</span>
+                                )}
+                              </div>
                               <span>
-                                {dateTime(photo.captured_at || photo.created_at)}
+                                {dateTime(
+                                  photo.device_captured_at ||
+                                    photo.captured_at ||
+                                    photo.created_at
+                                )}
                               </span>
                               <span>
-                                {photo.uploaded_by_name || "System"}
-                                {photo.latitude && photo.longitude
+                                {photo.captured_by_username ||
+                                  photo.uploaded_by_name ||
+                                  "System"}
+                                {photo.latitude != null && photo.longitude != null
                                   ? ` · GPS ${photo.latitude}, ${photo.longitude}`
+                                  : ""}
+                                {photo.gps_accuracy_m
+                                  ? ` · ±${Math.round(Number(photo.gps_accuracy_m))} m`
                                   : ""}
                               </span>
                             </figcaption>
@@ -307,9 +329,9 @@ export default async function WorkLocationPage({
                 <span>{groupedPhotos.completed.length > 0 ? "✓" : "○"}</span>
                 Completed-work photo
               </div>
-              <div className={l.latitude && l.longitude ? "proof-done" : ""}>
-                <span>{l.latitude && l.longitude ? "✓" : "○"}</span>
-                GPS location
+              <div className={hasLiveGps ? "proof-done" : ""}>
+                <span>{hasLiveGps ? "✓" : "○"}</span>
+                Live GPS proof
               </div>
               <div className={l.client_approved ? "proof-done" : ""}>
                 <span>{l.client_approved ? "✓" : "○"}</span>
