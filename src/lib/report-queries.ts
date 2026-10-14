@@ -227,15 +227,19 @@ export async function getOrderProfitabilityReport(range: ReportRange) {
 export async function getStatePerformance(range: ReportRange) {
   return sql`
     SELECT
-      COALESCE(c.state, 'Not set') AS state,
+      COALESCE(NULLIF(BTRIM(ol.state), ''), 'Not set') AS state,
       count(DISTINCT o.id)::int AS order_count,
-      COALESCE(sum(o.total_order_amount), 0) AS order_value
-    FROM orders o
-    JOIN customers c ON c.id = o.customer_id
-    WHERE o.created_at::date BETWEEN ${range.from}::date AND ${range.to}::date
+      count(ol.id)::int AS location_count,
+      COALESCE(sum(ol.area_sqft), 0) AS recorded_area_sqft,
+      ROUND(COALESCE(avg(ol.progress_percent), 0))::int AS average_progress
+    FROM order_locations ol
+    JOIN orders o ON o.id = ol.order_id
+    WHERE o.created_at >= ${range.from}::date
+      AND o.created_at < (${range.to}::date + interval '1 day')
       AND o.status <> 'cancelled'
-    GROUP BY COALESCE(c.state, 'Not set')
-    ORDER BY order_value DESC
+      AND ol.status <> 'cancelled'
+    GROUP BY COALESCE(NULLIF(BTRIM(ol.state), ''), 'Not set')
+    ORDER BY location_count DESC, state
   `;
 }
 
