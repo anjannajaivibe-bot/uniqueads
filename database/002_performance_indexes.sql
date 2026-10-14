@@ -1,6 +1,10 @@
 -- Unique Ads performance indexes
 -- Apply after review to the production Neon database.
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_app_users_worker_unique
+  ON app_users(worker_id)
+  WHERE worker_id IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_orders_assigned_supervisor
   ON orders(assigned_supervisor);
 
