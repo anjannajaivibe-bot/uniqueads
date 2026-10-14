@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader, Status } from "@/components/ui";
-import { WorkPhotoUploader } from "@/components/work-photo-uploader";
+import { requireAppUser } from "@/lib/auth/authorization";
 import { WorkUpdateForm } from "@/components/work-update-form";
 import { presignWorkPhotoDownload } from "@/lib/storage";
 import {
@@ -49,7 +49,8 @@ export default async function WorkLocationPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const location = await getWorkLocation(id);
+  const currentUser = await requireAppUser();
+  const location = await getWorkLocation(id, currentUser);
 
   if (!location) notFound();
   const l = location as any;
@@ -144,16 +145,20 @@ export default async function WorkLocationPage({
           </article>
 
           <article className="form-card">
-            <div className="form-section-title">
+            <div className="live-capture-cta">
               <div>
-                <h2>Upload Site Photo Proof</h2>
-                <p>Photos upload directly to the private Neon Object Storage bucket. Database credentials never reach the browser.</p>
+                <h3>Live Camera Photo Proof</h3>
+                <p>
+                  Gallery uploads are disabled. Capture fresh Before, During or Completion proof with live GPS, device time and your logged-in username.
+                </p>
               </div>
+              <Link
+                href={`/admin/work-progress/live-capture?location=${l.id}`}
+                className="button button-primary"
+              >
+                Open Live Capture
+              </Link>
             </div>
-            <WorkPhotoUploader
-              orderId={String(l.order_id)}
-              locationId={String(l.id)}
-            />
           </article>
 
           <article className="panel work-gallery-panel">
