@@ -4,10 +4,11 @@ import {
   getExpenseList,
   getFinanceOrderOptions,
   getFinanceSummary,
+  getFinanceWorkerOptions,
   getInvoiceList,
   getOrderProfitability,
 } from "@/lib/finance-queries";
-import { createExpense } from "./actions";
+import { createExpense, recordWorkerPayment } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -37,12 +38,13 @@ function currency(value: unknown) {
 }
 
 export default async function FinancePage() {
-  const [summary, invoices, expenses, orders, profitability] =
+  const [summary, invoices, expenses, orders, workers, profitability] =
     await Promise.all([
       getFinanceSummary(),
       getInvoiceList(),
       getExpenseList(),
       getFinanceOrderOptions(),
+      getFinanceWorkerOptions(),
       getOrderProfitability(),
     ]);
 
@@ -305,6 +307,93 @@ export default async function FinancePage() {
           </div>
         </section>
       </div>
+
+      <section className="form-card finance-section">
+        <div className="form-section-title">
+          <div>
+            <h2>Record Worker Payment</h2>
+            <p>
+              Accounts can record advances, progress and final payouts and link
+              them to the related campaign for accurate profitability.
+            </p>
+          </div>
+        </div>
+
+        <form action={recordWorkerPayment}>
+          <div className="form-grid">
+            <label>
+              <span>Worker *</span>
+              <select name="worker_id" required defaultValue="">
+                <option value="" disabled>Select worker</option>
+                {workers.map((worker: any) => (
+                  <option key={worker.id} value={worker.id}>
+                    {worker.worker_code
+                      ? `${worker.worker_code} · ${worker.name}`
+                      : worker.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Order</span>
+              <select name="order_id" defaultValue="">
+                <option value="">General / not linked</option>
+                {orders.map((order: any) => (
+                  <option key={order.id} value={order.id}>
+                    {order.order_no} · {order.company_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Payment Date *</span>
+              <input
+                name="payment_date"
+                type="date"
+                required
+                defaultValue={new Date().toISOString().slice(0, 10)}
+              />
+            </label>
+            <label>
+              <span>Payment Type *</span>
+              <select name="payment_type" defaultValue="progress">
+                <option value="advance">Advance</option>
+                <option value="progress">Progress</option>
+                <option value="final">Final</option>
+                <option value="adjustment">Adjustment</option>
+              </select>
+            </label>
+            <label>
+              <span>Amount *</span>
+              <input name="amount" type="number" min="0.01" step="0.01" required />
+            </label>
+            <label>
+              <span>Payment Method</span>
+              <select name="payment_method" defaultValue="">
+                <option value="">Select</option>
+                <option value="cash">Cash</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="upi">UPI</option>
+                <option value="cheque">Cheque</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label>
+              <span>Reference No.</span>
+              <input name="reference_no" />
+            </label>
+            <label className="full">
+              <span>Notes</span>
+              <textarea name="notes" rows={2} />
+            </label>
+          </div>
+          <div className="form-actions">
+            <button type="submit" className="button button-primary">
+              Save Worker Payment
+            </button>
+          </div>
+        </form>
+      </section>
 
       <section className="panel finance-section">
         <div className="panel-head">
