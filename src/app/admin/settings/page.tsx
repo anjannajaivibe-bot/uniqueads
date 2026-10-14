@@ -4,8 +4,8 @@ import {
   getAppUsers,
   getCompanySettingsRecord,
 } from "@/lib/settings-queries";
+import Link from "next/link";
 import {
-  createAppUser,
   saveCompanySettings,
   updateAppUserAccess,
 } from "./actions";
@@ -217,10 +217,13 @@ export default async function SettingsPage() {
               <div>
                 <h2>Staff Access</h2>
                 <p>
-                  Pre-authorise staff by email and assign the role they should
-                  receive when secure login is enabled.
+                  Review roles and account status. Create logins, reset passwords,
+                  assign teams and link supervisors to workers from Users & Access.
                 </p>
               </div>
+              <Link href="/admin/settings/users" className="button button-primary">
+                Users & Access
+              </Link>
             </div>
 
             <div className="table-wrap">
@@ -228,7 +231,7 @@ export default async function SettingsPage() {
                 <thead>
                   <tr>
                     <th>User</th>
-                    <th>Login Link</th>
+                    <th>Login</th>
                     <th>Role / Status / Updated</th>
                     <th />
                   </tr>
@@ -246,12 +249,12 @@ export default async function SettingsPage() {
                       <td>
                         <span
                           className={`status ${
-                            user.auth_user_id
+                            user.username
                               ? "status-completed"
                               : "status-draft"
                           }`}
                         >
-                          {user.auth_user_id ? "Linked" : "Awaiting Login"}
+                          {user.username ? user.username : "No credentials"}
                         </span>
                       </td>
                       <td colSpan={2}>
@@ -297,41 +300,16 @@ export default async function SettingsPage() {
           <section className="form-card sticky-card">
             <div className="form-section-title">
               <div>
-                <h2>Add Staff User</h2>
+                <h2>Users & Access</h2>
                 <p>
-                  This creates the application access profile. It does not send
-                  a password or invitation.
+                  Create username/password logins, reset passwords, assign teams
+                  and link Supervisor accounts to worker records.
                 </p>
               </div>
             </div>
-
-            <form action={createAppUser}>
-              <label className="stacked-field">
-                <span>Full Name *</span>
-                <input name="full_name" required />
-              </label>
-              <label className="stacked-field">
-                <span>Email *</span>
-                <input name="email" type="email" required />
-              </label>
-              <label className="stacked-field">
-                <span>Phone</span>
-                <input name="phone" />
-              </label>
-              <label className="stacked-field">
-                <span>Role *</span>
-                <select name="role" defaultValue="sales">
-                  <option value="super_admin">Super Admin</option>
-                  <option value="operations_manager">Operations Manager</option>
-                  <option value="accounts">Accounts</option>
-                  <option value="supervisor">Supervisor</option>
-                  <option value="sales">Sales</option>
-                </select>
-              </label>
-              <button type="submit" className="button button-primary button-full">
-                Add / Update User
-              </button>
-            </form>
+            <Link href="/admin/settings/users" className="button button-primary button-full">
+              Manage Users & Access
+            </Link>
           </section>
 
           <section className="panel settings-role-guide">
@@ -366,12 +344,12 @@ export default async function SettingsPage() {
           </section>
 
           <section className="panel settings-security-note">
-            <strong>Security before deployment</strong>
+            <strong>Login security active</strong>
             <p>
-              Login is currently being kept convenient while the admin panel is
-              under construction. In the final hardening pass we will turn the
-              secure login gate back on and enforce these roles module by
-              module.
+              Unique Ads uses Admin-managed username/password access, signed
+              12-hour sessions, failed-login lockout, login audit records and
+              role-based module permissions. Use Users & Access for credential
+              creation and password resets.
             </p>
           </section>
         </aside>
