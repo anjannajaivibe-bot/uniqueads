@@ -8,6 +8,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_app_users_worker_unique
 CREATE INDEX IF NOT EXISTS idx_orders_assigned_supervisor
   ON orders(assigned_supervisor);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_quotation_unique
+  ON orders(quotation_id)
+  WHERE quotation_id IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_order_worker_assignments_worker_active
   ON order_worker_assignments(worker_id, order_id, order_location_id)
   WHERE released_on IS NULL;
