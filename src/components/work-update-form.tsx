@@ -61,7 +61,6 @@ export function WorkUpdateForm({
             <option value="in_progress">In Progress</option>
             <option value="paused">Paused</option>
             <option value="quality_check">Quality Check</option>
-            <option value="completed">Completed</option>
             <option value="issue">Issue / Blocked</option>
           </select>
         </label>
@@ -72,7 +71,7 @@ export function WorkUpdateForm({
             name="progress_percent"
             type="number"
             min="0"
-            max="100"
+            max="99"
             step="1"
             defaultValue={currentProgress}
           />
@@ -94,7 +93,7 @@ export function WorkUpdateForm({
           <button type="button" className="button button-secondary" onClick={captureGps}>
             Capture Current Location
           </button>
-          <small>{gpsMessage || "Optional but recommended for field updates."}</small>
+          <small>{gpsMessage || "Optional for interim updates. Completion proof must use Live Capture."}</small>
         </div>
 
         <label className="full">
@@ -109,7 +108,7 @@ export function WorkUpdateForm({
 
       <div className="form-actions">
         <button type="submit" className="button button-primary">
-          Save Work Update
+          Save Interim Update
         </button>
       </div>
     </form>
