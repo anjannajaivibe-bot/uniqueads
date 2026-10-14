@@ -285,8 +285,8 @@ export default async function ReportsPage({
         <section className="panel">
           <div className="panel-head">
             <div>
-              <h2>State Performance</h2>
-              <p>Order value by customer state for the selected period.</p>
+              <h2>Execution by State</h2>
+              <p>Actual advertising work locations, recorded area and progress by state.</p>
             </div>
           </div>
           <div className="table-wrap">
@@ -295,18 +295,26 @@ export default async function ReportsPage({
                 <tr>
                   <th>State</th>
                   <th>Orders</th>
-                  <th className="align-right">Order Value</th>
+                  <th>Locations</th>
+                  <th className="align-right">Recorded Area</th>
+                  <th className="align-right">Avg. Progress</th>
                 </tr>
               </thead>
               <tbody>
                 {states.length === 0 ? (
-                  <tr><td colSpan={3} className="empty-cell">No state data in this period.</td></tr>
+                  <tr><td colSpan={5} className="empty-cell">No execution-location data in this period.</td></tr>
                 ) : (
                   states.map((row: any) => (
                     <tr key={row.state}>
                       <td><strong>{row.state}</strong></td>
                       <td>{row.order_count}</td>
-                      <td className="align-right"><strong>{currency(row.order_value)}</strong></td>
+                      <td>{row.location_count}</td>
+                      <td className="align-right">
+                        <strong>{Number(row.recorded_area_sqft || 0).toLocaleString("en-IN")} sq.ft</strong>
+                      </td>
+                      <td className="align-right">
+                        <strong>{Number(row.average_progress || 0)}%</strong>
+                      </td>
                     </tr>
                   ))
                 )}
