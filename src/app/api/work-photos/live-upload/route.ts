@@ -173,11 +173,25 @@ export async function POST(request: NextRequest) {
       ol.order_id,
       ol.location_name,
       o.order_no,
-      o.campaign_name
+      o.campaign_name,
+      o.assigned_supervisor,
+      exists (
+        select 1
+        from public.order_worker_assignments owa
+        where owa.order_id = o.id
+          and owa.worker_id = ${user.worker_id}::uuid
+          and owa.released_on is null
+          and (
+            owa.order_location_id is null
+            or owa.order_location_id = ol.id
+          )
+      ) as worker_assigned
     from public.order_locations ol
     join public.orders o on o.id = ol.order_id
     where ol.id = ${locationId}
       and ol.order_id = ${orderId}
+      and ol.status <> 'cancelled'
+      and o.status <> 'cancelled'
     limit 1
   `;
 
@@ -185,6 +199,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Work location was not found." },
       { status: 404 }
+    );
+  }
+
+  const targetLocation = locations[0] as any;
+  if (
+    user.role === "supervisor" &&
+    String(targetLocation.assigned_supervisor || "") !== String(user.id) &&
+    !Boolean(targetLocation.worker_assigned)
+  ) {
+    return NextResponse.json(
+      { error: "This work location is not assigned to your account." },
+      { status: 403 }
     );
   }
 
@@ -315,10 +341,47 @@ export async function POST(request: NextRequest) {
     `;
   }
 
+  const locationStats = await sql`
+    select
+      count(*) filter (where status <> 'cancelled')::int as active_locations,
+      count(*) filter (where status = 'completed')::int as completed_locations
+    from public.order_locations
+    where order_id = ${orderId}
+  `;
+
+  const stats = locationStats[0] as any;
+  const allCompleted =
+    Number(stats?.active_locations || 0) > 0 &&
+    Number(stats?.active_locations || 0) === Number(stats?.completed_locations || 0);
+
+  if (allCompleted) {
+    await sql`
+      update public.orders
+      set status = 'completed',
+          completed_date = coalesce(completed_date, current_date),
+          updated_at = now()
+      where id = ${orderId}
+        and status not in ('invoiced', 'closed', 'cancelled')
+    `;
+  } else if (photoType !== "completed") {
+    await sql`
+      update public.orders
+      set status = case
+            when status in ('order_received', 'planning', 'team_assigned', 'material_ready', 'work_started')
+              then 'in_progress'
+            else status
+          end,
+          updated_at = now()
+      where id = ${orderId}
+        and status not in ('completed', 'invoiced', 'closed', 'cancelled')
+    `;
+  }
+
   return NextResponse.json({
     ok: true,
     photoId: inserted[0]?.id,
     serverReceivedAt: inserted[0]?.created_at,
     location: locations[0],
+    orderCompleted: allCompleted,
   });
 }
