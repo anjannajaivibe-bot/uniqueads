@@ -9,7 +9,6 @@ import {
   getWorkerPayments,
 } from "@/lib/worker-queries";
 import {
-  addWorkerPayment,
   toggleWorkerActive,
   updateWorker,
 } from "../actions";
@@ -302,77 +301,9 @@ export default async function WorkerDetailPage({
             </div>
           </article>
 
-          <article className="form-card">
-            <div className="form-section-title">
-              <div>
-                <h2>Record Worker Payment</h2>
-                <p>Track advances, progress payments and final settlements.</p>
-              </div>
-            </div>
-
-            <form action={addWorkerPayment}>
-              <input type="hidden" name="worker_id" value={w.id} />
-              <div className="form-grid">
-                <label>
-                  <span>Payment Date *</span>
-                  <input
-                    name="payment_date"
-                    type="date"
-                    required
-                    defaultValue={new Date().toISOString().slice(0, 10)}
-                  />
-                </label>
-                <label>
-                  <span>Payment Type *</span>
-                  <select name="payment_type" defaultValue="progress">
-                    <option value="advance">Advance</option>
-                    <option value="progress">Progress</option>
-                    <option value="final">Final</option>
-                    <option value="adjustment">Adjustment</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Amount *</span>
-                  <input name="amount" type="number" min="0.01" step="0.01" required />
-                </label>
-                <label>
-                  <span>Payment Method</span>
-                  <select name="payment_method" defaultValue="">
-                    <option value="">Select</option>
-                    <option value="cash">Cash</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="upi">UPI</option>
-                    <option value="cheque">Cheque</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Order</span>
-                  <select name="order_id" defaultValue="">
-                    <option value="">General / not linked</option>
-                    {orderOptions.map((order: any) => (
-                      <option key={order.id} value={order.id}>
-                        {order.order_no} · {order.campaign_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>Reference Number</span>
-                  <input name="reference_no" placeholder="UPI / bank / cheque reference" />
-                </label>
-                <label className="full">
-                  <span>Notes</span>
-                  <textarea name="notes" rows={2} />
-                </label>
-              </div>
-
-              <div className="form-actions">
-                <button type="submit" className="button button-primary">
-                  Record Payment
-                </button>
-              </div>
-            </form>
+          <article className="panel" style={{ padding: 20 }}>
+            <h2>Worker Payments</h2>
+            <p>Payments are recorded by Accounts through the Finance module. Operations can review payment history below.</p>
           </article>
 
           <article className="panel">
