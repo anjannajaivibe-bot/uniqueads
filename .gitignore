@@ -1,0 +1,26 @@
+# Dependencies and build output
+node_modules/
+.next/
+
+# Local tooling
+.vercel/
+.patch-backups/
+*.ps1
+*.log
+*.tsbuildinfo
+
+# Environment and credential files
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Local Neon metadata
+.neon
+
+# Internal audit files
+production-readiness-audit.txt
+
+# OS files
+.DS_Store
+Thumbs.db
