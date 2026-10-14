@@ -286,7 +286,7 @@ export default async function ReportsPage({
           <div className="panel-head">
             <div>
               <h2>State Performance</h2>
-              <p>Order value by customer state for the selected period.</p>
+              <p>Advertising locations and attributed order value by execution state.</p>
             </div>
           </div>
           <div className="table-wrap">
@@ -295,17 +295,19 @@ export default async function ReportsPage({
                 <tr>
                   <th>State</th>
                   <th>Orders</th>
-                  <th className="align-right">Order Value</th>
+                  <th>Locations</th>
+                  <th className="align-right">Attributed Value</th>
                 </tr>
               </thead>
               <tbody>
                 {states.length === 0 ? (
-                  <tr><td colSpan={3} className="empty-cell">No state data in this period.</td></tr>
+                  <tr><td colSpan={4} className="empty-cell">No state data in this period.</td></tr>
                 ) : (
                   states.map((row: any) => (
                     <tr key={row.state}>
                       <td><strong>{row.state}</strong></td>
                       <td>{row.order_count}</td>
+                      <td>{row.location_count}</td>
                       <td className="align-right"><strong>{currency(row.order_value)}</strong></td>
                     </tr>
                   ))
