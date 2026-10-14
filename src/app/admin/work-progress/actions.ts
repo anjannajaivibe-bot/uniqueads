@@ -73,14 +73,35 @@ export async function addWorkUpdate(formData: FormData) {
   }
 
   const rows = await sql`
-    SELECT id, order_id, location_name, progress_percent
-    FROM order_locations
-    WHERE id = ${locationId}::uuid
+    SELECT
+      ol.id,
+      ol.order_id,
+      ol.location_name,
+      ol.progress_percent,
+      (
+        o.assigned_supervisor = ${currentUser.id}::uuid
+        OR (
+          ${currentUser.worker_id}::uuid IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM order_worker_assignments owa
+            WHERE owa.order_id = o.id
+              AND owa.worker_id = ${currentUser.worker_id}::uuid
+              AND owa.released_on IS NULL
+          )
+        )
+      ) AS supervisor_access
+    FROM order_locations ol
+    JOIN orders o ON o.id = ol.order_id
+    WHERE ol.id = ${locationId}::uuid
     LIMIT 1
   `;
 
   const location = rows[0] as any;
   if (!location) throw new Error("Work location not found.");
+  if (currentUser.role === "supervisor" && !location.supervisor_access) {
+    throw new Error("This work location is not assigned to you.");
+  }
 
   const requestedProgress = numberOrNull(formData.get("progress_percent"));
   const progress =
