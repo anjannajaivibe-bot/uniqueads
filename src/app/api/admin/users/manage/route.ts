@@ -121,6 +121,88 @@ export async function POST(request: NextRequest) {
       return redirectToUsers(request, "error", "User ID is missing.");
     }
 
+    if (action === "update_profile") {
+      const fullName = String(form.get("full_name") || "").trim();
+      const role = String(form.get("role") || "");
+      const teamName = String(form.get("team_name") || "").trim() || null;
+      const workerId = String(form.get("worker_id") || "").trim() || null;
+
+      if (!fullName) {
+        return redirectToUsers(request, "error", "Full name is required.");
+      }
+
+      if (!ROLES.has(role)) {
+        return redirectToUsers(request, "error", "Invalid role.");
+      }
+
+      const targetRows = await sql`
+        select id, role, is_active
+        from public.app_users
+        where id = ${userId}
+        limit 1
+      `;
+
+      const target = targetRows[0] as any;
+      if (!target) {
+        return redirectToUsers(request, "error", "User was not found.");
+      }
+
+      if (userId === currentUser.id && role !== "super_admin") {
+        return redirectToUsers(
+          request,
+          "error",
+          "You cannot remove your own Super Admin role."
+        );
+      }
+
+      if (workerId) {
+        const linked = await sql`
+          select id
+          from public.app_users
+          where worker_id = ${workerId}
+            and id <> ${userId}
+          limit 1
+        `;
+
+        if (linked.length > 0) {
+          return redirectToUsers(
+            request,
+            "error",
+            "That worker is already linked to another login."
+          );
+        }
+      }
+
+      if (target.role === "super_admin" && role !== "super_admin") {
+        const admins = await sql`
+          select count(*)::int as count
+          from public.app_users
+          where role = 'super_admin'
+            and is_active = true
+        `;
+
+        if (Number(admins[0]?.count || 0) <= 1) {
+          return redirectToUsers(
+            request,
+            "error",
+            "At least one active Super Admin must remain."
+          );
+        }
+      }
+
+      await sql`
+        update public.app_users
+        set full_name = ${fullName},
+            role = ${role},
+            team_name = ${teamName},
+            worker_id = ${workerId},
+            updated_at = now()
+        where id = ${userId}
+      `;
+
+      return redirectToUsers(request, "success", "User profile updated.");
+    }
+
     if (action === "reset_password") {
       const password = String(form.get("password") || "");
       if (password.length < 8) {
