@@ -9,12 +9,14 @@ export async function getExecutiveReport(range: ReportRange) {
   const rows = await sql`
     SELECT
       (SELECT count(*) FROM leads
-        WHERE created_at::date BETWEEN ${range.from}::date AND ${range.to}::date
+        WHERE created_at >= ${range.from}::date
+          AND created_at < (${range.to}::date + interval '1 day')
       )::int AS leads_created,
 
       (SELECT count(*) FROM leads
         WHERE status = 'won'
-          AND updated_at::date BETWEEN ${range.from}::date AND ${range.to}::date
+          AND updated_at >= ${range.from}::date
+          AND updated_at < (${range.to}::date + interval '1 day')
       )::int AS leads_won,
 
       COALESCE((
@@ -27,7 +29,8 @@ export async function getExecutiveReport(range: ReportRange) {
       COALESCE((
         SELECT sum(total_order_amount)
         FROM orders
-        WHERE created_at::date BETWEEN ${range.from}::date AND ${range.to}::date
+        WHERE created_at >= ${range.from}::date
+          AND created_at < (${range.to}::date + interval '1 day')
           AND status <> 'cancelled'
       ), 0) AS order_value,
 
@@ -81,7 +84,8 @@ export async function getSalesFunnel(range: ReportRange) {
       status,
       count(*)::int AS count
     FROM leads
-    WHERE created_at::date BETWEEN ${range.from}::date AND ${range.to}::date
+    WHERE created_at >= ${range.from}::date
+          AND created_at < (${range.to}::date + interval '1 day')
     GROUP BY status
     ORDER BY CASE status
       WHEN 'new' THEN 1
@@ -104,38 +108,63 @@ export async function getMonthlyPerformance() {
         date_trunc('month', CURRENT_DATE),
         interval '1 month'
       ) AS month_start
+    ),
+    order_months AS (
+      SELECT date_trunc('month', created_at) AS month_start,
+             COALESCE(sum(total_order_amount), 0) AS value
+      FROM orders
+      WHERE created_at >= date_trunc('month', CURRENT_DATE) - interval '5 months'
+        AND created_at < date_trunc('month', CURRENT_DATE) + interval '1 month'
+        AND status <> 'cancelled'
+      GROUP BY 1
+    ),
+    invoice_months AS (
+      SELECT date_trunc('month', invoice_date::timestamp) AS month_start,
+             COALESCE(sum(total_amount), 0) AS value
+      FROM invoices
+      WHERE invoice_date >= (date_trunc('month', CURRENT_DATE) - interval '5 months')::date
+        AND invoice_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date
+        AND status <> 'cancelled'
+      GROUP BY 1
+    ),
+    collection_months AS (
+      SELECT date_trunc('month', payment_date::timestamp) AS month_start,
+             COALESCE(sum(amount), 0) AS value
+      FROM customer_payments
+      WHERE payment_date >= (date_trunc('month', CURRENT_DATE) - interval '5 months')::date
+        AND payment_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date
+      GROUP BY 1
+    ),
+    expense_months AS (
+      SELECT date_trunc('month', expense_date::timestamp) AS month_start,
+             COALESCE(sum(amount), 0) AS value
+      FROM expenses
+      WHERE expense_date >= (date_trunc('month', CURRENT_DATE) - interval '5 months')::date
+        AND expense_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date
+      GROUP BY 1
+    ),
+    worker_months AS (
+      SELECT date_trunc('month', payment_date::timestamp) AS month_start,
+             COALESCE(sum(amount), 0) AS value
+      FROM worker_payments
+      WHERE payment_date >= (date_trunc('month', CURRENT_DATE) - interval '5 months')::date
+        AND payment_date < (date_trunc('month', CURRENT_DATE) + interval '1 month')::date
+      GROUP BY 1
     )
     SELECT
       to_char(m.month_start, 'Mon YYYY') AS month_label,
       m.month_start,
-      COALESCE((
-        SELECT sum(o.total_order_amount)
-        FROM orders o
-        WHERE date_trunc('month', o.created_at) = m.month_start
-          AND o.status <> 'cancelled'
-      ), 0) AS order_value,
-      COALESCE((
-        SELECT sum(i.total_amount)
-        FROM invoices i
-        WHERE date_trunc('month', i.invoice_date::timestamp) = m.month_start
-          AND i.status <> 'cancelled'
-      ), 0) AS invoice_value,
-      COALESCE((
-        SELECT sum(cp.amount)
-        FROM customer_payments cp
-        WHERE date_trunc('month', cp.payment_date::timestamp) = m.month_start
-      ), 0) AS collections,
-      COALESCE((
-        SELECT sum(e.amount)
-        FROM expenses e
-        WHERE date_trunc('month', e.expense_date::timestamp) = m.month_start
-      ), 0) AS expenses,
-      COALESCE((
-        SELECT sum(wp.amount)
-        FROM worker_payments wp
-        WHERE date_trunc('month', wp.payment_date::timestamp) = m.month_start
-      ), 0) AS worker_payments
+      COALESCE(o.value, 0) AS order_value,
+      COALESCE(i.value, 0) AS invoice_value,
+      COALESCE(cp.value, 0) AS collections,
+      COALESCE(e.value, 0) AS expenses,
+      COALESCE(wp.value, 0) AS worker_payments
     FROM months m
+    LEFT JOIN order_months o ON o.month_start = m.month_start
+    LEFT JOIN invoice_months i ON i.month_start = m.month_start
+    LEFT JOIN collection_months cp ON cp.month_start = m.month_start
+    LEFT JOIN expense_months e ON e.month_start = m.month_start
+    LEFT JOIN worker_months wp ON wp.month_start = m.month_start
     ORDER BY m.month_start
   `;
 }
@@ -167,17 +196,17 @@ export async function getCustomerOutstandingReport() {
         COALESCE(i.total_invoiced, 0) - COALESCE(p.total_received, 0)
       ) AS outstanding
     FROM customers c
-    LEFT JOIN LATERAL (
-      SELECT COALESCE(sum(total_amount), 0) AS total_invoiced
+    LEFT JOIN (
+      SELECT customer_id,
+             COALESCE(sum(total_amount) FILTER (WHERE status <> 'cancelled'), 0) AS total_invoiced
       FROM invoices
-      WHERE customer_id = c.id
-        AND status <> 'cancelled'
-    ) i ON true
-    LEFT JOIN LATERAL (
-      SELECT COALESCE(sum(amount), 0) AS total_received
+      GROUP BY customer_id
+    ) i ON i.customer_id = c.id
+    LEFT JOIN (
+      SELECT customer_id, COALESCE(sum(amount), 0) AS total_received
       FROM customer_payments
-      WHERE customer_id = c.id
-    ) p ON true
+      GROUP BY customer_id
+    ) p ON p.customer_id = c.id
     WHERE c.is_active = true
       AND GREATEST(
         0,
@@ -207,17 +236,20 @@ export async function getOrderProfitabilityReport(range: ReportRange) {
       ) AS estimated_profit
     FROM orders o
     JOIN customers c ON c.id = o.customer_id
-    LEFT JOIN LATERAL (
-      SELECT COALESCE(sum(amount), 0) AS expenses
+    LEFT JOIN (
+      SELECT order_id, COALESCE(sum(amount), 0) AS expenses
       FROM expenses
-      WHERE order_id = o.id
-    ) ex ON true
-    LEFT JOIN LATERAL (
-      SELECT COALESCE(sum(amount), 0) AS worker_cost
+      WHERE order_id IS NOT NULL
+      GROUP BY order_id
+    ) ex ON ex.order_id = o.id
+    LEFT JOIN (
+      SELECT order_id, COALESCE(sum(amount), 0) AS worker_cost
       FROM worker_payments
-      WHERE order_id = o.id
-    ) wp ON true
-    WHERE o.created_at::date BETWEEN ${range.from}::date AND ${range.to}::date
+      WHERE order_id IS NOT NULL
+      GROUP BY order_id
+    ) wp ON wp.order_id = o.id
+    WHERE o.created_at >= ${range.from}::date
+      AND o.created_at < (${range.to}::date + interval '1 day')
       AND o.status <> 'cancelled'
     ORDER BY estimated_profit DESC
     LIMIT 100
@@ -232,7 +264,8 @@ export async function getStatePerformance(range: ReportRange) {
       COALESCE(sum(o.total_order_amount), 0) AS order_value
     FROM orders o
     JOIN customers c ON c.id = o.customer_id
-    WHERE o.created_at::date BETWEEN ${range.from}::date AND ${range.to}::date
+    WHERE o.created_at >= ${range.from}::date
+          AND created_at < (${range.to}::date + interval '1 day')
       AND o.status <> 'cancelled'
     GROUP BY COALESCE(c.state, 'Not set')
     ORDER BY order_value DESC
