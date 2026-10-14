@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { TablePagination } from "@/components/table-pagination";
 
 type LeadRow = {
   id: string;
@@ -46,6 +47,8 @@ function isOverdue(value: string | Date | null, status: string) {
   return new Date(value).getTime() < Date.now();
 }
 
+const PAGE_SIZE = 50;
+
 export function LeadsTable({ leads }: { leads: LeadRow[] }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
@@ -56,6 +59,8 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
     () => Array.from(new Set(leads.map((lead) => lead.source))).sort(),
     [leads]
   );
+
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -89,6 +94,17 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
       return matchesQuery && matchesStatus && matchesSource && matchesFollowup;
     });
   }, [leads, query, status, source, followup]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, status, source, followup]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   return (
     <section className="panel">
@@ -180,7 +196,7 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
                 </td>
               </tr>
             ) : (
-              filtered.map((lead) => {
+              pageRows.map((lead) => {
                 const overdue = isOverdue(lead.next_follow_up_at, lead.status);
 
                 return (
@@ -233,6 +249,14 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
           </tbody>
         </table>
       </div>
+
+      <TablePagination
+        page={currentPage}
+        totalPages={totalPages}
+        totalItems={filtered.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
     </section>
   );
 }

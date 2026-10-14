@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { TablePagination } from "@/components/table-pagination";
 
 type Row = {
   id: string;
@@ -51,10 +52,14 @@ function overdue(row: Row) {
   return new Date(row.due_date).getTime() < Date.now();
 }
 
+const PAGE_SIZE = 50;
+
 export function OrdersTable({ rows }: { rows: Row[] }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [due, setDue] = useState("all");
+
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -86,6 +91,17 @@ export function OrdersTable({ rows }: { rows: Row[] }) {
       );
     });
   }, [rows, query, status, due]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, status, due]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   return (
     <section className="panel">
@@ -155,7 +171,7 @@ export function OrdersTable({ rows }: { rows: Row[] }) {
                 </td>
               </tr>
             ) : (
-              filtered.map((row) => {
+              pageRows.map((row) => {
                 const isOverdue = overdue(row);
 
                 return (
@@ -208,6 +224,14 @@ export function OrdersTable({ rows }: { rows: Row[] }) {
           </tbody>
         </table>
       </div>
+
+      <TablePagination
+        page={currentPage}
+        totalPages={totalPages}
+        totalItems={filtered.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
     </section>
   );
 }
