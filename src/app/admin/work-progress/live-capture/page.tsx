@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { neon } from "@neondatabase/serverless";
 import { getPasswordSessionAppUser } from "@/lib/auth/password-session";
+import { sql } from "@/lib/db";
 import { LiveCaptureClient } from "@/components/work-progress/live-capture-client";
 
 export const dynamic = "force-dynamic";
@@ -17,14 +17,9 @@ export default async function LiveCapturePage() {
   if (!user) redirect("/login");
   if (!FIELD_ROLES.has(user.role)) redirect("/unauthorized");
 
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error("DATABASE_URL is not configured.");
-
-  const sql = neon(databaseUrl);
-
   let locations: any[];
 
-  if (user.role === "supervisor" && user.worker_id) {
+  if (user.role === "supervisor") {
     locations = await sql`
       select
         ol.id,
@@ -42,12 +37,16 @@ export default async function LiveCapturePage() {
       where ol.status not in ('completed', 'cancelled')
         and o.status <> 'cancelled'
         and (
-          o.assigned_supervisor = ${user.worker_id}
-          or exists (
-            select 1
-            from public.order_worker_assignments owa
-            where owa.order_id = o.id
-              and owa.worker_id = ${user.worker_id}
+          o.assigned_supervisor = ${user.id}
+          or (
+            ${user.worker_id || null}::uuid is not null
+            and exists (
+              select 1
+              from public.order_worker_assignments owa
+              where owa.order_id = o.id
+                and owa.worker_id = ${user.worker_id || null}::uuid
+                and owa.released_on is null
+            )
           )
         )
       order by o.due_date nulls last, o.order_no, ol.location_name
