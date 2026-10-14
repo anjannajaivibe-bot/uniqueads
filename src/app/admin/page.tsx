@@ -10,10 +10,14 @@ export default async function DashboardPage() {
   const canSales = roleAllowed(currentUser.role, ACCESS.sales);
   const canField = roleAllowed(currentUser.role, ACCESS.field);
   const canFinance = roleAllowed(currentUser.role, ACCESS.finance);
+  const canCommercial =
+    canFinance ||
+    currentUser.role === "super_admin" ||
+    currentUser.role === "operations_manager";
 
   const [m, orders] = await Promise.all([
-    getDashboardMetrics(),
-    canField ? getRecentOrders() : Promise.resolve([]),
+    getDashboardMetrics(currentUser),
+    canField ? getRecentOrders(currentUser) : Promise.resolve([]),
   ]);
 
   const completion = Number(m.total_locations) > 0
@@ -42,7 +46,7 @@ export default async function DashboardPage() {
           </>
         ) : null}
 
-        {canField || canFinance ? (
+        {canCommercial ? (
           <StatCard label="Order Value This Month" value={inr(m.month_order_value)} />
         ) : null}
 
