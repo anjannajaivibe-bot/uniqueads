@@ -57,12 +57,13 @@ export async function addWorkUpdate(formData: FormData) {
     "in_progress",
     "paused",
     "quality_check",
-    "completed",
     "issue",
   ];
 
   if (!locationId || !updateStatus || !allowed.includes(updateStatus)) {
-    throw new Error("Location and a valid work status are required.");
+    throw new Error(
+      "Location and a valid interim work status are required. Use Live Capture for completion."
+    );
   }
 
   if (latitude !== null && (latitude < -90 || latitude > 90)) {
@@ -73,37 +74,62 @@ export async function addWorkUpdate(formData: FormData) {
   }
 
   const rows = await sql`
-    SELECT id, order_id, location_name, progress_percent
-    FROM order_locations
-    WHERE id = ${locationId}::uuid
+    SELECT
+      ol.id,
+      ol.order_id,
+      ol.location_name,
+      ol.progress_percent,
+      ol.status,
+      o.assigned_supervisor,
+      EXISTS (
+        SELECT 1
+        FROM order_worker_assignments owa
+        WHERE owa.order_id = ol.order_id
+          AND owa.worker_id = ${currentUser.worker_id}::uuid
+          AND owa.released_on IS NULL
+          AND (
+            owa.order_location_id IS NULL
+            OR owa.order_location_id = ol.id
+          )
+      ) AS worker_assigned
+    FROM order_locations ol
+    JOIN orders o ON o.id = ol.order_id
+    WHERE ol.id = ${locationId}::uuid
     LIMIT 1
   `;
 
   const location = rows[0] as any;
   if (!location) throw new Error("Work location not found.");
 
+  if (
+    currentUser.role === "supervisor" &&
+    String(location.assigned_supervisor || "") !== currentUser.id &&
+    !Boolean(location.worker_assigned)
+  ) {
+    throw new Error("This work location is not assigned to your account.");
+  }
+
+  if (location.status === "completed") {
+    throw new Error("Completed locations cannot receive interim updates.");
+  }
+
   const requestedProgress = numberOrNull(formData.get("progress_percent"));
-  const progress =
-    updateStatus === "completed"
-      ? 100
-      : Math.min(
-          100,
-          Math.max(
-            0,
-            requestedProgress === null
-              ? Number(location.progress_percent || 0)
-              : Math.round(requestedProgress)
-          )
-        );
+  const progress = Math.min(
+    99,
+    Math.max(
+      0,
+      requestedProgress === null
+        ? Number(location.progress_percent || 0)
+        : Math.round(requestedProgress)
+    )
+  );
 
   const mappedLocationStatus =
-    updateStatus === "completed"
-      ? "completed"
-      : updateStatus === "quality_check"
-        ? "quality_check"
-        : updateStatus === "issue" || updateStatus === "paused"
-          ? "blocked"
-          : "in_progress";
+    updateStatus === "quality_check"
+      ? "quality_check"
+      : updateStatus === "issue" || updateStatus === "paused"
+        ? "blocked"
+        : "in_progress";
 
   const updateRows = await sql`
     INSERT INTO work_updates (
@@ -136,43 +162,16 @@ export async function addWorkUpdate(formData: FormData) {
     UPDATE order_locations
     SET
       status = ${mappedLocationStatus},
-      progress_percent = ${progress},
+      progress_percent = GREATEST(progress_percent, ${progress}),
       client_approved = ${clientApproved},
       latitude = COALESCE(${latitude}, latitude),
       longitude = COALESCE(${longitude}, longitude),
-      completed_date = CASE
-        WHEN ${mappedLocationStatus} = 'completed'
-          THEN COALESCE(completed_date, CURRENT_DATE)
-        ELSE NULL
-      END,
       updated_at = now()
     WHERE id = ${locationId}::uuid
+      AND status <> 'completed'
   `;
 
-  const statsRows = await sql`
-    SELECT
-      count(*) FILTER (WHERE status <> 'cancelled')::int AS active_locations,
-      count(*) FILTER (WHERE status = 'completed')::int AS completed_locations,
-      count(*) FILTER (WHERE status = 'quality_check')::int AS quality_locations,
-      count(*) FILTER (WHERE status = 'in_progress')::int AS active_work_locations
-    FROM order_locations
-    WHERE order_id = ${location.order_id}::uuid
-  `;
-
-  const stats = statsRows[0] as any;
-  const allCompleted =
-    Number(stats.active_locations || 0) > 0 &&
-    Number(stats.completed_locations || 0) === Number(stats.active_locations || 0);
-
-  if (allCompleted) {
-    await sql`
-      UPDATE orders
-      SET status = 'completed',
-          completed_date = COALESCE(completed_date, CURRENT_DATE),
-          updated_at = now()
-      WHERE id = ${location.order_id}::uuid
-    `;
-  } else if (updateStatus === "quality_check") {
+  if (updateStatus === "quality_check") {
     await sql`
       UPDATE orders
       SET status = 'quality_check', updated_at = now()
@@ -215,4 +214,3 @@ export async function addWorkUpdate(formData: FormData) {
   revalidatePath("/admin/work-progress");
   revalidatePath(`/admin/work-progress/${locationId}`);
 }
-
