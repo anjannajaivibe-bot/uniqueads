@@ -5,7 +5,6 @@ import {
   getWorkerActivity,
   getWorkerAssignments,
   getWorkerById,
-  getWorkerOrderOptions,
   getWorkerPayments,
 } from "@/lib/worker-queries";
 import {
@@ -74,11 +73,10 @@ export default async function WorkerDetailPage({
 }) {
   const { id } = await params;
 
-  const [worker, assignments, payments, orderOptions, activity] = await Promise.all([
+  const [worker, assignments, payments, activity] = await Promise.all([
     getWorkerById(id),
     getWorkerAssignments(id),
     getWorkerPayments(id),
-    getWorkerOrderOptions(id),
     getWorkerActivity(id),
   ]);
 
