@@ -37,6 +37,10 @@ function expenseNo() {
   return `UA-EXP-${new Date().getFullYear()}-${randomUUID().slice(0, 6).toUpperCase()}`;
 }
 
+function workerPaymentNo() {
+  return `UA-WPAY-${new Date().getFullYear()}-${randomUUID().slice(0, 6).toUpperCase()}`;
+}
+
 function parseItems(raw: string | null): InvoiceItemInput[] {
   if (!raw) throw new Error("At least one invoice item is required.");
 
@@ -572,3 +576,100 @@ export async function createExpense(formData: FormData) {
   revalidatePath("/admin/finance");
 }
 
+
+
+export async function recordWorkerPayment(formData: FormData) {
+  const currentUser = await requireRoles(ACCESS.finance);
+
+  const workerId = clean(formData.get("worker_id"));
+  const orderId = clean(formData.get("order_id"));
+  const amount = money(clean(formData.get("amount")));
+  const paymentType = clean(formData.get("payment_type")) ?? "progress";
+  const paymentMethod = clean(formData.get("payment_method"));
+
+  const allowedTypes = ["advance", "progress", "final", "adjustment"];
+  const allowedMethods = ["cash", "bank_transfer", "upi", "cheque", "other"];
+
+  if (!workerId || amount <= 0) {
+    throw new Error("Worker and payment amount are required.");
+  }
+  if (!allowedTypes.includes(paymentType)) {
+    throw new Error("Invalid worker payment type.");
+  }
+  if (paymentMethod && !allowedMethods.includes(paymentMethod)) {
+    throw new Error("Invalid worker payment method.");
+  }
+
+  const workerRows = await sql`
+    SELECT id, name
+    FROM workers
+    WHERE id = ${workerId}::uuid
+      AND is_active = true
+    LIMIT 1
+  `;
+
+  const worker = workerRows[0] as any;
+  if (!worker) throw new Error("Worker not found or inactive.");
+
+  if (orderId) {
+    const orderRows = await sql`
+      SELECT id
+      FROM orders
+      WHERE id = ${orderId}::uuid
+        AND status <> 'cancelled'
+      LIMIT 1
+    `;
+    if (!orderRows[0]) throw new Error("Selected order was not found.");
+  }
+
+  const paymentNumber = workerPaymentNo();
+
+  const rows = await sql`
+    INSERT INTO worker_payments (
+      payment_no,
+      worker_id,
+      order_id,
+      payment_date,
+      payment_type,
+      amount,
+      payment_method,
+      reference_no,
+      notes,
+      paid_by
+    ) VALUES (
+      ${paymentNumber},
+      ${workerId}::uuid,
+      ${orderId},
+      ${clean(formData.get("payment_date")) ?? new Date().toISOString().slice(0, 10)},
+      ${paymentType},
+      ${amount},
+      ${paymentMethod},
+      ${clean(formData.get("reference_no"))},
+      ${clean(formData.get("notes"))},
+      ${currentUser.id}
+    )
+    RETURNING id
+  `;
+
+  const paymentId = String(rows[0].id);
+
+  await logActivity(
+    currentUser.id,
+    "worker",
+    workerId,
+    "worker_payment_recorded",
+    `Worker payment ${paymentNumber} recorded for ${worker.name}.`,
+    {
+      payment_id: paymentId,
+      payment_no: paymentNumber,
+      amount,
+      order_id: orderId,
+      payment_type: paymentType,
+    }
+  );
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/finance");
+  revalidatePath("/admin/workers");
+  revalidatePath(`/admin/workers/${workerId}`);
+}
