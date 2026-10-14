@@ -188,6 +188,16 @@ export async function getOrderProfitability() {
   `;
 }
 
+export async function getFinanceWorkerOptions() {
+  return sql`
+    SELECT id, worker_code, name, skill
+    FROM workers
+    WHERE is_active = true
+    ORDER BY name
+    LIMIT 1000
+  `;
+}
+
 export async function getInvoiceOrderSource(orderId: string) {
   const rows = await sql`
     SELECT
