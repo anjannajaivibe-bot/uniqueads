@@ -1,6 +1,7 @@
 import { PageHeader, StatCard } from "@/components/ui";
 import { OrdersTable } from "@/components/orders-table";
 import { getOrderCounts, getOrderList } from "@/lib/order-queries";
+import { requireAppUser } from "@/lib/auth/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +14,10 @@ function currency(value: unknown) {
 }
 
 export default async function OrdersPage() {
+  const currentUser = await requireAppUser();
   const [rows, counts] = await Promise.all([
-    getOrderList(),
-    getOrderCounts(),
+    getOrderList(currentUser),
+    getOrderCounts(currentUser),
   ]);
 
   const safeRows = rows.map((row: any) => ({
@@ -28,7 +30,7 @@ export default async function OrdersPage() {
     <>
       <PageHeader
         title="Orders"
-        description="Plan confirmed campaigns, locations, teams and execution deadlines."
+        description={currentUser.role === "supervisor" ? "Your assigned campaigns, locations and execution deadlines." : "Plan confirmed campaigns, locations, teams and execution deadlines."}
       />
 
       <div className="lead-stats">
