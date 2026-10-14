@@ -99,3 +99,33 @@
 .live-proof-badge,.legacy-proof-badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;font-size:9px;font-weight:900;letter-spacing:.05em;white-space:nowrap}
 .live-proof-badge{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
 .legacy-proof-badge{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}
+
+.settings-layout-single{grid-template-columns:minmax(0,1.7fr) minmax(280px,.7fr)}
+.form-message{margin-bottom:16px;padding:12px 14px;border-radius:10px;font-size:12px;font-weight:800}
+.form-message-success{background:#ecfdf3;color:#067647;border:1px solid #abefc6}
+.form-message-error{background:#fff0ee;color:#9d2c20;border:1px solid #fecdca}
+.users-create-card{margin-bottom:20px}
+.users-access-list{display:grid;gap:12px;padding:16px}
+.user-access-card{display:grid;gap:14px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.user-access-summary{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.user-access-summary>div{display:grid;gap:3px}
+.user-access-summary>div strong{color:var(--navy-deep);font-size:14px}
+.user-access-summary>div span{color:var(--muted);font-size:11px}
+.user-access-meta{display:flex;flex-wrap:wrap;gap:7px 14px;color:var(--muted);font-size:11px}
+.user-profile-form{display:grid;grid-template-columns:1.2fr 1fr 1fr 1.2fr auto;gap:10px;align-items:end}
+.user-profile-form label{display:grid;gap:5px}
+.user-profile-form label span{font-size:10px;font-weight:800;color:var(--muted)}
+.user-access-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;border-top:1px solid var(--line);padding-top:12px}
+.user-access-actions form{display:flex;align-items:center;gap:8px}
+.user-access-actions input{min-width:150px}
+@media(max-width:1050px){
+  .settings-layout-single{grid-template-columns:1fr}
+  .user-profile-form{grid-template-columns:1fr 1fr}
+  .user-profile-form button{width:100%}
+}
+@media(max-width:620px){
+  .user-profile-form{grid-template-columns:1fr}
+  .user-access-actions{align-items:stretch;flex-direction:column}
+  .user-access-actions form{width:100%;flex-wrap:wrap}
+  .user-access-actions input,.user-access-actions button{flex:1;min-width:0}
+}
