@@ -10,10 +10,14 @@ export type AppRole =
 
 export type CurrentAppUser = {
   id: string;
+  username: string;
   auth_user_id: string | null;
   full_name: string;
   email: string | null;
+  phone: string | null;
   role: AppRole;
+  team_name: string | null;
+  worker_id: string | null;
   is_active: boolean;
 };
 
