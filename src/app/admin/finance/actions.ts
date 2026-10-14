@@ -386,96 +386,130 @@ export async function recordCustomerPayment(formData: FormData) {
     throw new Error("Invalid payment method.");
   }
 
-  const invoiceRows = await sql`
-    SELECT
-      id,
-      invoice_no,
-      customer_id,
-      order_id,
-      total_amount,
-      amount_paid,
-      status
-    FROM invoices
-    WHERE id = ${invoiceId}::uuid
-    LIMIT 1
-  `;
-
-  const invoice = invoiceRows[0] as any;
-  if (!invoice) throw new Error("Invoice not found.");
-  if (invoice.status === "cancelled") {
-    throw new Error("Payments cannot be recorded against a cancelled invoice.");
-  }
-
-  const remaining =
-    Math.max(0, Number(invoice.total_amount) - Number(invoice.amount_paid));
-
-  if (amount > remaining + 0.009) {
-    throw new Error(`Payment exceeds invoice outstanding of ₹${remaining.toFixed(2)}.`);
-  }
-
   const number = paymentNo();
+  const paymentDate =
+    clean(formData.get("payment_date")) ??
+    new Date().toISOString().slice(0, 10);
+  const referenceNo = clean(formData.get("reference_no"));
+  const notes = clean(formData.get("notes"));
 
-  await sql`
-    INSERT INTO customer_payments (
-      payment_no,
-      customer_id,
-      order_id,
-      invoice_id,
-      payment_date,
-      amount,
-      payment_method,
-      reference_no,
-      notes,
-      received_by
-    ) VALUES (
-      ${number},
-      ${invoice.customer_id}::uuid,
-      ${invoice.order_id}::uuid,
-      ${invoiceId}::uuid,
-      ${clean(formData.get("payment_date")) ?? new Date().toISOString().slice(0, 10)},
-      ${amount},
-      ${method},
-      ${clean(formData.get("reference_no"))},
-      ${clean(formData.get("notes"))},
-      ${currentUser.id}
+  // Keep the outstanding check, invoice balance update, payment insert and
+  // activity log in one PostgreSQL statement. This prevents two simultaneous
+  // submissions from both passing a stale outstanding-balance check.
+  const recorded = await sql`
+    WITH updated_invoice AS (
+      UPDATE invoices
+      SET
+        amount_paid = amount_paid + ${amount},
+        status = CASE
+          WHEN amount_paid + ${amount} >= total_amount
+            AND total_amount > 0
+            THEN 'paid'
+          ELSE 'partially_paid'
+        END,
+        updated_at = now()
+      WHERE id = ${invoiceId}::uuid
+        AND status <> 'cancelled'
+        AND amount_paid + ${amount} <= total_amount + 0.009
+      RETURNING
+        id,
+        invoice_no,
+        customer_id,
+        order_id,
+        total_amount,
+        amount_paid,
+        status
+    ),
+    inserted_payment AS (
+      INSERT INTO customer_payments (
+        payment_no,
+        customer_id,
+        order_id,
+        invoice_id,
+        payment_date,
+        amount,
+        payment_method,
+        reference_no,
+        notes,
+        received_by
+      )
+      SELECT
+        ${number},
+        customer_id,
+        order_id,
+        id,
+        ${paymentDate},
+        ${amount},
+        ${method},
+        ${referenceNo},
+        ${notes},
+        ${currentUser.id}
+      FROM updated_invoice
+      RETURNING id
+    ),
+    inserted_activity AS (
+      INSERT INTO activity_logs (
+        actor_user_id,
+        action,
+        entity_type,
+        entity_id,
+        description,
+        metadata
+      )
+      SELECT
+        ${currentUser.id},
+        'customer_payment_recorded',
+        'invoice',
+        id,
+        ${`Payment ${number} recorded.`},
+        ${JSON.stringify({
+          payment_no: number,
+          amount,
+          payment_method: method,
+        })}
+      FROM updated_invoice
+      RETURNING id
     )
+    SELECT
+      ui.id,
+      ui.invoice_no,
+      ui.customer_id,
+      ui.order_id,
+      ui.total_amount,
+      ui.amount_paid,
+      ui.status,
+      ip.id AS payment_id,
+      ia.id AS activity_id
+    FROM updated_invoice ui
+    JOIN inserted_payment ip ON true
+    JOIN inserted_activity ia ON true
   `;
 
-  const totals = await sql`
-    SELECT COALESCE(sum(amount), 0) AS paid
-    FROM customer_payments
-    WHERE invoice_id = ${invoiceId}::uuid
-  `;
+  const invoice = recorded[0] as any;
 
-  const paid = Math.min(
-    Number(invoice.total_amount),
-    Number(totals[0]?.paid || 0)
-  );
+  if (!invoice) {
+    const rows = await sql`
+      SELECT id, total_amount, amount_paid, status
+      FROM invoices
+      WHERE id = ${invoiceId}::uuid
+      LIMIT 1
+    `;
 
-  const nextStatus =
-    paid >= Number(invoice.total_amount) && Number(invoice.total_amount) > 0
-      ? "paid"
-      : paid > 0
-        ? "partially_paid"
-        : invoice.status;
+    const current = rows[0] as any;
+    if (!current) throw new Error("Invoice not found.");
+    if (current.status === "cancelled") {
+      throw new Error("Payments cannot be recorded against a cancelled invoice.");
+    }
 
-  await sql`
-    UPDATE invoices
-    SET
-      amount_paid = ${paid},
-      status = ${nextStatus},
-      updated_at = now()
-    WHERE id = ${invoiceId}::uuid
-  `;
+    const remaining = Math.max(
+      0,
+      Number(current.total_amount) - Number(current.amount_paid)
+    );
 
-  await logActivity(
-    currentUser.id,
-    "invoice",
-    invoiceId,
-    "customer_payment_recorded",
-    `Payment ${number} recorded for ${invoice.invoice_no}.`,
-    { payment_no: number, amount, payment_method: method }
-  );
+    throw new Error(
+      `Payment exceeds invoice outstanding of ₹${remaining.toFixed(2)}.`
+    );
+  }
 
   revalidatePath("/admin");
   revalidatePath("/admin/finance");

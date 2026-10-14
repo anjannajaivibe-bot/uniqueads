@@ -8,6 +8,9 @@ import {
 
 export const runtime = "nodejs";
 
+const DUMMY_PASSWORD_HASH =
+  "pbkdf2_sha256$210000$5ffsRai0gPNKODkwkMG9VQ$3oxsNZ5NBN0ItQbvFLVOaYG3omYW6g340KuGL7hIeTg";
+
 function safeNext(value: FormDataEntryValue | null) {
   const next = String(value || "/admin");
   return next.startsWith("/") && !next.startsWith("//")
@@ -44,7 +47,12 @@ export async function POST(request: NextRequest) {
   const password = String(form.get("password") || "");
   const next = safeNext(form.get("next"));
 
-  if (!username || !password) {
+  if (
+    !username ||
+    username.length > 40 ||
+    !password ||
+    password.length > 256
+  ) {
     return loginRedirect(request, "invalid", next);
   }
 
@@ -62,6 +70,10 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get("user-agent");
 
   if (!user) {
+    // Perform the same expensive password verification for unknown usernames
+    // so login timing does not reveal whether an account exists.
+    verifyPassword(password, DUMMY_PASSWORD_HASH);
+
     await sql`
       insert into public.app_login_audit
         (username, success, ip_address, user_agent, failure_reason)
