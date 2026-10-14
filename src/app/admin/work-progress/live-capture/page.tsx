@@ -11,7 +11,11 @@ const FIELD_ROLES = new Set([
   "supervisor",
 ]);
 
-export default async function LiveCapturePage() {
+export default async function LiveCapturePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ location?: string }>;
+}) {
   const user = await getPasswordSessionAppUser();
 
   if (!user) redirect("/login");
@@ -21,10 +25,10 @@ export default async function LiveCapturePage() {
   if (!databaseUrl) throw new Error("DATABASE_URL is not configured.");
 
   const sql = neon(databaseUrl);
-
+  const params = await searchParams;
   let locations: any[];
 
-  if (user.role === "supervisor" && user.worker_id) {
+  if (user.role === "supervisor") {
     locations = await sql`
       select
         ol.id,
@@ -42,12 +46,20 @@ export default async function LiveCapturePage() {
       where ol.status not in ('completed', 'cancelled')
         and o.status <> 'cancelled'
         and (
-          o.assigned_supervisor = ${user.worker_id}
-          or exists (
-            select 1
-            from public.order_worker_assignments owa
-            where owa.order_id = o.id
-              and owa.worker_id = ${user.worker_id}
+          o.assigned_supervisor = ${user.id}
+          or (
+            ${user.worker_id}::uuid is not null
+            and exists (
+              select 1
+              from public.order_worker_assignments owa
+              where owa.order_id = o.id
+                and owa.worker_id = ${user.worker_id}
+                and owa.released_on is null
+                and (
+                  owa.order_location_id is null
+                  or owa.order_location_id = ol.id
+                )
+            )
           )
         )
       order by o.due_date nulls last, o.order_no, ol.location_name
@@ -73,15 +85,20 @@ export default async function LiveCapturePage() {
     `;
   }
 
+  const requestedLocation = String(params.location || "");
+  const initialLocationId = locations.some(
+    (location: any) => String(location.id) === requestedLocation
+  )
+    ? requestedLocation
+    : undefined;
+
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <div>
         <p style={{ margin: 0, color: "#f47b20", fontWeight: 850 }}>
           Work Progress
         </p>
-        <h1 style={{ margin: "5px 0" }}>
-          Live Photo Capture
-        </h1>
+        <h1 style={{ margin: "5px 0" }}>Live Photo Capture</h1>
         <p style={{ margin: 0, color: "#667085" }}>
           Camera-only proof with live GPS, device capture time,
           server timestamp and logged-in username.
@@ -91,6 +108,7 @@ export default async function LiveCapturePage() {
       <LiveCaptureClient
         locations={locations as any}
         username={String(user.username || user.full_name || "team-user")}
+        initialLocationId={initialLocationId}
       />
 
       <p style={{ margin: 0 }}>
