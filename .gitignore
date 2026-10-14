@@ -24,3 +24,4 @@ production-readiness-audit.txt
 # OS files
 .DS_Store
 Thumbs.db
+.env*
