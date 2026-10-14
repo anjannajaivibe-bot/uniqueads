@@ -62,9 +62,10 @@ export default async function FinancePage() {
         title="Finance"
         description="Invoices, collections, operating expenses, worker payouts and order profitability."
         action={
-          <Link href="/admin/finance/invoices/new" className="button button-primary">
-            + Create Invoice
-          </Link>
+          <div className="header-actions">
+            <Link href="/admin/finance/worker-payments" className="button button-secondary">Worker Payments</Link>
+            <Link href="/admin/finance/invoices/new" className="button button-primary">+ Create Invoice</Link>
+          </div>
         }
       />
 
