@@ -173,7 +173,20 @@ export async function POST(request: NextRequest) {
       ol.order_id,
       ol.location_name,
       o.order_no,
-      o.campaign_name
+      o.campaign_name,
+      (
+        o.assigned_supervisor = ${user.id}::uuid
+        OR (
+          ${user.worker_id || null}::uuid IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM public.order_worker_assignments owa
+            WHERE owa.order_id = o.id
+              AND owa.worker_id = ${user.worker_id || null}::uuid
+              AND owa.released_on IS NULL
+          )
+        )
+      ) AS supervisor_access
     from public.order_locations ol
     join public.orders o on o.id = ol.order_id
     where ol.id = ${locationId}
@@ -185,6 +198,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Work location was not found." },
       { status: 404 }
+    );
+  }
+
+  if (user.role === "supervisor" && !locations[0].supervisor_access) {
+    return NextResponse.json(
+      { error: "This work location is not assigned to you." },
+      { status: 403 }
     );
   }
 
