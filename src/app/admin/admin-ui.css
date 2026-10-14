@@ -87,3 +87,10 @@
 
 .supervisor-readonly form{display:none}
 .supervisor-readonly .form-card:has(form){display:none}
+
+.attention-panel{margin-bottom:22px}
+.attention-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;padding:16px}
+.attention-card{display:grid;gap:4px;padding:14px 15px;border:1px solid #f4d1c2;border-radius:12px;background:#fff9f6}
+.attention-card span{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#8f492b}
+.attention-card strong{font-size:24px;color:var(--navy-deep)}
+.attention-card small{font-size:11px;color:var(--muted)}
