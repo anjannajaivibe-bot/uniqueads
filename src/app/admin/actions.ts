@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { sql } from "@/lib/db";
-import { requireAppUser } from "@/lib/auth/authorization";
+import { ACCESS, requireRoles } from "@/lib/auth/permissions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -64,7 +64,7 @@ async function logLeadActivity(
 }
 
 export async function createLead(formData: FormData) {
-  const currentUser = await requireAppUser();
+  const currentUser = await requireRoles(ACCESS.sales);
 
   const contactPerson = clean(formData.get("contact_person"));
   const phone = clean(formData.get("phone"));
@@ -134,7 +134,7 @@ export async function createLead(formData: FormData) {
 }
 
 export async function updateLead(formData: FormData) {
-  const currentUser = await requireAppUser();
+  const currentUser = await requireRoles(ACCESS.sales);
 
   const leadId = clean(formData.get("lead_id"));
   const contactPerson = clean(formData.get("contact_person"));
@@ -179,7 +179,7 @@ export async function updateLead(formData: FormData) {
 }
 
 export async function updateLeadStatus(formData: FormData) {
-  const currentUser = await requireAppUser();
+  const currentUser = await requireRoles(ACCESS.sales);
 
   const leadId = clean(formData.get("lead_id"));
   const status = clean(formData.get("status"));
@@ -229,7 +229,7 @@ export async function updateLeadStatus(formData: FormData) {
 }
 
 export async function addLeadFollowup(formData: FormData) {
-  const currentUser = await requireAppUser();
+  const currentUser = await requireRoles(ACCESS.sales);
 
   const leadId = clean(formData.get("lead_id"));
   const channel = clean(formData.get("channel"));
@@ -292,7 +292,7 @@ export async function addLeadFollowup(formData: FormData) {
 }
 
 export async function convertLeadToCustomer(formData: FormData) {
-  const currentUser = await requireAppUser();
+  const currentUser = await requireRoles(ACCESS.sales);
   const leadId = clean(formData.get("lead_id"));
 
   if (!leadId) {

@@ -12,7 +12,7 @@ export default async function AdminLayout({
 
   return (
     <div className="admin-shell">
-      <AdminSidebar />
+      <AdminSidebar currentUser={currentUser} />
       <div className="admin-main">
         <AdminTopbar currentUser={currentUser} />
         <main className="content-area">{children}</main>
