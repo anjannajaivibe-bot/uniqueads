@@ -189,9 +189,14 @@ export default async function SettingsPage() {
                 <span>Leads, customers and quotation workflow.</span>
               </div>
             </div>
-            <Link href="/admin/settings/users" className="button button-secondary button-full">
-              Manage Users & Access
-            </Link>
+            <div className="settings-link-stack">
+              <Link href="/admin/settings/users" className="button button-secondary button-full">
+                Manage Users & Access
+              </Link>
+              <Link href="/admin/settings/activity" className="button button-secondary button-full">
+                Activity & Login Audit
+              </Link>
+            </div>
           </section>
 
           <section className="panel settings-security-note">
