@@ -84,3 +84,6 @@
   .dashboard-action-grid{grid-template-columns:1fr}
   .loading-row{grid-template-columns:1fr}
 }
+
+.supervisor-readonly form{display:none}
+.supervisor-readonly .form-card:has(form){display:none}
