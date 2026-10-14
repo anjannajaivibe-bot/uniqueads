@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { TablePager } from "@/components/table-pager";
 
 type LeadRow = {
   id: string;
@@ -51,6 +52,7 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
   const [status, setStatus] = useState("all");
   const [source, setSource] = useState("all");
   const [followup, setFollowup] = useState("all");
+  const [page, setPage] = useState(1);
 
   const sources = useMemo(
     () => Array.from(new Set(leads.map((lead) => lead.source))).sort(),
@@ -89,6 +91,14 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
       return matchesQuery && matchesStatus && matchesSource && matchesFollowup;
     });
   }, [leads, query, status, source, followup]);
+
+  const pageSize = 50;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pagedRows = filtered.slice(
+    (safePage - 1) * pageSize,
+    safePage * pageSize
+  );
 
   return (
     <section className="panel">
@@ -180,7 +190,7 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
                 </td>
               </tr>
             ) : (
-              filtered.map((lead) => {
+              pagedRows.map((lead) => {
                 const overdue = isOverdue(lead.next_follow_up_at, lead.status);
 
                 return (
@@ -233,6 +243,12 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
           </tbody>
         </table>
       </div>
+      <TablePager
+        page={safePage}
+        total={filtered.length}
+        pageSize={pageSize}
+        onPageChange={setPage}
+      />
     </section>
   );
 }
