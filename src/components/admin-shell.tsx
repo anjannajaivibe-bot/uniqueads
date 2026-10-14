@@ -1,18 +1,81 @@
-import Link from "next/link";
-import type { CurrentAppUser } from "@/lib/auth/authorization";
+"use client";
 
-const navigation = [
-  ["Dashboard", "/admin", "▦"],
-  ["Leads", "/admin/leads", "◎"],
-  ["Customers", "/admin/customers", "◉"],
-  ["Quotations", "/admin/quotations", "▤"],
-  ["Orders", "/admin/orders", "▣"],
-  ["Work Progress", "/admin/work-progress", "◫"],
-  ["Workers", "/admin/workers", "◌"],
-  ["Finance", "/admin/finance", "₹"],
-  ["Reports", "/admin/reports", "↗"],
-  ["Settings", "/admin/settings", "⚙"],
-] as const;
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import type { AppRole, CurrentAppUser } from "@/lib/auth/authorization";
+
+type NavItem = {
+  label: string;
+  href: string;
+  icon: string;
+  roles: AppRole[];
+};
+
+const allRoles: AppRole[] = [
+  "super_admin",
+  "operations_manager",
+  "supervisor",
+  "sales",
+  "accounts",
+];
+
+const navigation: NavItem[] = [
+  { label: "Dashboard", href: "/admin", icon: "▦", roles: allRoles },
+  {
+    label: "Leads",
+    href: "/admin/leads",
+    icon: "◎",
+    roles: ["super_admin", "operations_manager", "sales"],
+  },
+  {
+    label: "Customers",
+    href: "/admin/customers",
+    icon: "◉",
+    roles: ["super_admin", "operations_manager", "sales"],
+  },
+  {
+    label: "Quotations",
+    href: "/admin/quotations",
+    icon: "▤",
+    roles: ["super_admin", "operations_manager", "sales"],
+  },
+  {
+    label: "Orders",
+    href: "/admin/orders",
+    icon: "▣",
+    roles: ["super_admin", "operations_manager", "supervisor"],
+  },
+  {
+    label: "Work Progress",
+    href: "/admin/work-progress",
+    icon: "◫",
+    roles: ["super_admin", "operations_manager", "supervisor"],
+  },
+  {
+    label: "Workers",
+    href: "/admin/workers",
+    icon: "◌",
+    roles: ["super_admin", "operations_manager"],
+  },
+  {
+    label: "Finance",
+    href: "/admin/finance",
+    icon: "₹",
+    roles: ["super_admin", "accounts"],
+  },
+  {
+    label: "Reports",
+    href: "/admin/reports",
+    icon: "↗",
+    roles: ["super_admin", "accounts", "operations_manager"],
+  },
+  {
+    label: "Settings",
+    href: "/admin/settings",
+    icon: "⚙",
+    roles: ["super_admin"],
+  },
+];
 
 function roleLabel(role: string) {
   return role
@@ -21,7 +84,21 @@ function roleLabel(role: string) {
     .join(" ");
 }
 
-export function AdminSidebar() {
+function isActivePath(pathname: string, href: string) {
+  if (href === "/admin") return pathname === "/admin";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function AdminSidebar({
+  currentUser,
+}: {
+  currentUser: CurrentAppUser;
+}) {
+  const pathname = usePathname();
+  const visibleNavigation = navigation.filter((item) =>
+    item.roles.includes(currentUser.role)
+  );
+
   return (
     <aside className="sidebar">
       <div className="brand-block">
@@ -33,21 +110,53 @@ export function AdminSidebar() {
       </div>
 
       <nav className="side-nav" aria-label="Admin navigation">
-        {navigation.map(([label, href, icon]) => (
-          <Link href={href} key={href} className="nav-link">
-            <span className="nav-icon" aria-hidden="true">
-              {icon}
-            </span>
-            <span>{label}</span>
-          </Link>
-        ))}
+        {visibleNavigation.map((item) => {
+          const active = isActivePath(pathname, item.href);
+          return (
+            <Link
+              href={item.href}
+              key={item.href}
+              className={`nav-link${active ? " nav-link-active" : ""}`}
+              aria-current={active ? "page" : undefined}
+            >
+              <span className="nav-icon" aria-hidden="true">
+                {item.icon}
+              </span>
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="sidebar-foot">
-        <div className="scope-pill">Telangana · AP · Karnataka</div>
+        <div className="scope-pill">
+          <strong>{roleLabel(currentUser.role)}</strong>
+          <span>Telangana · AP · Karnataka</span>
+        </div>
       </div>
     </aside>
   );
+}
+
+function primaryAction(user: CurrentAppUser) {
+  if (
+    ["super_admin", "operations_manager", "sales"].includes(user.role)
+  ) {
+    return { href: "/admin/leads/new", label: "+ New Lead" };
+  }
+
+  if (user.role === "supervisor") {
+    return {
+      href: "/admin/work-progress/live-capture",
+      label: "Live Capture",
+    };
+  }
+
+  if (user.role === "accounts") {
+    return { href: "/admin/finance", label: "Open Finance" };
+  }
+
+  return null;
 }
 
 export function AdminTopbar({
@@ -55,17 +164,21 @@ export function AdminTopbar({
 }: {
   currentUser: CurrentAppUser;
 }) {
+  const action = primaryAction(currentUser);
+
   return (
     <header className="topbar">
-      <div>
+      <div className="topbar-title">
         <p className="topbar-kicker">Unique Ads</p>
         <strong>Operational Control Center</strong>
       </div>
 
       <div className="topbar-actions">
-        <Link href="/admin/leads/new" className="button button-primary">
-          + New Lead
-        </Link>
+        {action ? (
+          <Link href={action.href} className="button button-primary topbar-cta">
+            {action.label}
+          </Link>
+        ) : null}
 
         <div className="current-user">
           <div className="current-user-copy">
@@ -76,19 +189,7 @@ export function AdminTopbar({
             href="/api/app-auth/logout"
             title="Sign out"
             aria-label="Sign out"
-            style={{
-              display: "grid",
-              placeItems: "center",
-              width: 34,
-              height: 34,
-              borderRadius: "999px",
-              background: "#071c3b",
-              color: "white",
-              textDecoration: "none",
-              fontSize: 12,
-              fontWeight: 850,
-              flexShrink: 0,
-            }}
+            className="signout-button"
           >
             OUT
           </a>
@@ -97,4 +198,3 @@ export function AdminTopbar({
     </header>
   );
 }
-
