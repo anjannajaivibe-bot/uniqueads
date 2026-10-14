@@ -1,74 +1,34 @@
+import Link from "next/link";
 import { PageHeader } from "@/components/ui";
-import { requireAppUser } from "@/lib/auth/authorization";
-import {
-  getAppUsers,
-  getCompanySettingsRecord,
-} from "@/lib/settings-queries";
-import {
-  createAppUser,
-  saveCompanySettings,
-  updateAppUserAccess,
-} from "./actions";
+import { getCompanySettingsRecord } from "@/lib/settings-queries";
+import { saveCompanySettings } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-function dateTime(value: any) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d);
-}
-
 export default async function SettingsPage() {
-  const currentUser = await requireAppUser();
-
-  if (currentUser.role !== "super_admin") {
-    return (
-      <>
-        <PageHeader
-          title="Settings"
-          description="Company configuration and user access."
-        />
-        <section className="panel settings-access-denied">
-          <h2>Super Admin access required</h2>
-          <p>
-            Company settings, banking information and user roles are restricted
-            to Super Admin accounts.
-          </p>
-        </section>
-      </>
-    );
-  }
-
-  const [settings, users] = await Promise.all([
-    getCompanySettingsRecord(),
-    getAppUsers(),
-  ]);
-
+  const settings = await getCompanySettingsRecord();
   const s = (settings || {}) as any;
 
   return (
     <>
       <PageHeader
         title="Settings"
-        description="Company identity, GST, banking, document defaults and controlled staff access."
+        description="Company identity, GST, banking and document defaults."
+        action={
+          <Link href="/admin/settings/users" className="button button-primary">
+            Users & Access
+          </Link>
+        }
       />
 
-      <div className="settings-layout">
+      <div className="settings-layout settings-layout-single">
         <section className="settings-main-column">
           <form action={saveCompanySettings} className="form-card">
             <div className="form-section-title">
               <div>
                 <h2>Company Profile</h2>
                 <p>
-                  These details are used on quotations, invoices and official
-                  customer documents.
+                  Used on quotations, invoices and official customer documents.
                 </p>
               </div>
             </div>
@@ -96,11 +56,7 @@ export default async function SettingsPage() {
               </label>
               <label>
                 <span>Email</span>
-                <input
-                  name="email"
-                  type="email"
-                  defaultValue={s.email || ""}
-                />
+                <input name="email" type="email" defaultValue={s.email || ""} />
               </label>
               <label>
                 <span>Website</span>
@@ -120,11 +76,7 @@ export default async function SettingsPage() {
               </label>
               <label className="full">
                 <span>Business Address</span>
-                <textarea
-                  name="address"
-                  rows={3}
-                  defaultValue={s.address || ""}
-                />
+                <textarea name="address" rows={3} defaultValue={s.address || ""} />
               </label>
               <label className="full">
                 <span>Logo URL</span>
@@ -138,10 +90,7 @@ export default async function SettingsPage() {
             <div className="form-section-title form-section-divider">
               <div>
                 <h2>Bank & Payment Details</h2>
-                <p>
-                  These details can appear on invoices to help customers pay
-                  correctly.
-                </p>
+                <p>Shown on invoices when payment details are available.</p>
               </div>
             </div>
 
@@ -177,10 +126,7 @@ export default async function SettingsPage() {
             <div className="form-section-title form-section-divider">
               <div>
                 <h2>Commercial Defaults</h2>
-                <p>
-                  Default wording is automatically offered when new quotations
-                  and invoices are created.
-                </p>
+                <p>Automatically offered on new quotations and invoices.</p>
               </div>
             </div>
 
@@ -191,7 +137,7 @@ export default async function SettingsPage() {
                   name="quotation_terms"
                   rows={6}
                   defaultValue={s.quotation_terms || ""}
-                  placeholder="Quotation validity, material/execution conditions, exclusions, approval terms..."
+                  placeholder="Quotation validity, execution conditions, exclusions and approval terms..."
                 />
               </label>
               <label className="full">
@@ -200,7 +146,7 @@ export default async function SettingsPage() {
                   name="invoice_terms"
                   rows={6}
                   defaultValue={s.invoice_terms || ""}
-                  placeholder="Payment due period, payment instructions, late-payment notes..."
+                  placeholder="Payment due period, payment instructions and collection terms..."
                 />
               </label>
             </div>
@@ -211,167 +157,48 @@ export default async function SettingsPage() {
               </button>
             </div>
           </form>
-
-          <section className="panel settings-users-panel">
-            <div className="panel-head">
-              <div>
-                <h2>Staff Access</h2>
-                <p>
-                  Pre-authorise staff by email and assign the role they should
-                  receive when secure login is enabled.
-                </p>
-              </div>
-            </div>
-
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>User</th>
-                    <th>Login Link</th>
-                    <th>Role / Status / Updated</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user: any) => (
-                    <tr key={user.id}>
-                      <td>
-                        <strong>{user.full_name}</strong>
-                        <div className="table-subtext">
-                          {user.email}
-                          {user.phone ? ` · ${user.phone}` : ""}
-                        </div>
-                      </td>
-                      <td>
-                        <span
-                          className={`status ${
-                            user.auth_user_id
-                              ? "status-completed"
-                              : "status-draft"
-                          }`}
-                        >
-                          {user.auth_user_id ? "Linked" : "Awaiting Login"}
-                        </span>
-                      </td>
-                      <td colSpan={2}>
-                        <form
-                          action={updateAppUserAccess}
-                          className="settings-user-access-form"
-                        >
-                          <input type="hidden" name="user_id" value={user.id} />
-                          <select name="role" defaultValue={user.role}>
-                            <option value="super_admin">Super Admin</option>
-                            <option value="operations_manager">
-                              Operations Manager
-                            </option>
-                            <option value="accounts">Accounts</option>
-                            <option value="supervisor">Supervisor</option>
-                            <option value="sales">Sales</option>
-                          </select>
-                          <select
-                            name="is_active"
-                            defaultValue={user.is_active ? "true" : "false"}
-                          >
-                            <option value="true">Active</option>
-                            <option value="false">Inactive</option>
-                          </select>
-                          <span>{dateTime(user.updated_at)}</span>
-                          <button
-                            type="submit"
-                            className="button button-compact button-secondary"
-                          >
-                            Save
-                          </button>
-                        </form>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
         </section>
 
         <aside className="settings-side-column">
-          <section className="form-card sticky-card">
-            <div className="form-section-title">
-              <div>
-                <h2>Add Staff User</h2>
-                <p>
-                  This creates the application access profile. It does not send
-                  a password or invitation.
-                </p>
-              </div>
-            </div>
-
-            <form action={createAppUser}>
-              <label className="stacked-field">
-                <span>Full Name *</span>
-                <input name="full_name" required />
-              </label>
-              <label className="stacked-field">
-                <span>Email *</span>
-                <input name="email" type="email" required />
-              </label>
-              <label className="stacked-field">
-                <span>Phone</span>
-                <input name="phone" />
-              </label>
-              <label className="stacked-field">
-                <span>Role *</span>
-                <select name="role" defaultValue="sales">
-                  <option value="super_admin">Super Admin</option>
-                  <option value="operations_manager">Operations Manager</option>
-                  <option value="accounts">Accounts</option>
-                  <option value="supervisor">Supervisor</option>
-                  <option value="sales">Sales</option>
-                </select>
-              </label>
-              <button type="submit" className="button button-primary button-full">
-                Add / Update User
-              </button>
-            </form>
-          </section>
-
           <section className="panel settings-role-guide">
             <div className="panel-head">
               <div>
-                <h2>Role Guide</h2>
-                <p>Target access model for production.</p>
+                <h2>Access Control</h2>
+                <p>Team credentials are managed separately from company settings.</p>
               </div>
             </div>
             <div className="role-guide-list">
               <div>
                 <strong>Super Admin</strong>
-                <span>All modules, company settings and user access.</span>
+                <span>All modules, settings and user access.</span>
               </div>
               <div>
                 <strong>Operations Manager</strong>
-                <span>Orders, execution, workers and operational reporting.</span>
+                <span>Sales pipeline, orders, execution, workers and reports.</span>
               </div>
               <div>
                 <strong>Accounts</strong>
-                <span>Invoices, collections, expenses and financial reports.</span>
+                <span>Finance, collections, expenses and reports.</span>
               </div>
               <div>
                 <strong>Supervisor</strong>
-                <span>Assigned order execution and field progress.</span>
+                <span>Assigned orders, work progress and live photo proof.</span>
               </div>
               <div>
                 <strong>Sales</strong>
                 <span>Leads, customers and quotation workflow.</span>
               </div>
             </div>
+            <Link href="/admin/settings/users" className="button button-secondary button-full">
+              Manage Users & Access
+            </Link>
           </section>
 
           <section className="panel settings-security-note">
-            <strong>Security before deployment</strong>
+            <strong>Production security</strong>
             <p>
-              Login is currently being kept convenient while the admin panel is
-              under construction. In the final hardening pass we will turn the
-              secure login gate back on and enforce these roles module by
-              module.
+              Unique Ads now uses admin-managed usernames and passwords, signed
+              server sessions, role-based module access and login auditing.
             </p>
           </section>
         </aside>
