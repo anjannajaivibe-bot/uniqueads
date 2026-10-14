@@ -109,6 +109,23 @@ export async function POST(request: NextRequest) {
         return redirectToUsers(request, "error", "Invalid role.");
       }
 
+      if (workerId) {
+        const linked = await sql`
+          select id
+          from public.app_users
+          where worker_id = ${workerId}
+          limit 1
+        `;
+
+        if (linked.length > 0) {
+          return redirectToUsers(
+            request,
+            "error",
+            "That worker is already linked to another login."
+          );
+        }
+      }
+
       const passwordHash = hashPassword(password);
 
       const created = await sql`
