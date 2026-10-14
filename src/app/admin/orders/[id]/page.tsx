@@ -382,7 +382,6 @@ export default async function OrderDetailPage({
                               <option value="assigned">Assigned</option>
                               <option value="in_progress">In Progress</option>
                               <option value="quality_check">Quality Check</option>
-                              <option value="completed">Completed</option>
                               <option value="blocked">Blocked</option>
                               <option value="cancelled">Cancelled</option>
                             </select>
@@ -393,7 +392,7 @@ export default async function OrderDetailPage({
                               name="progress_percent"
                               type="number"
                               min="0"
-                              max="100"
+                              max="99"
                               step="1"
                               defaultValue={location.progress_percent}
                             />
