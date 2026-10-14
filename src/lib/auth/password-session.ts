@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { neon } from "@neondatabase/serverless";
+import { cache } from "react";
 
 export const APP_SESSION_COOKIE = "uniqueads_app_session";
 
@@ -124,7 +125,7 @@ export async function verifyPasswordSessionToken(
   }
 }
 
-export async function getPasswordSessionAppUser() {
+export const getPasswordSessionAppUser = cache(async function getPasswordSessionAppUser() {
   const cookieStore = await cookies();
   const token = cookieStore.get(APP_SESSION_COOKIE)?.value;
   const payload = await verifyPasswordSessionToken(token);
@@ -147,4 +148,4 @@ export async function getPasswordSessionAppUser() {
   `;
 
   return rows[0] || null;
-}
+});
