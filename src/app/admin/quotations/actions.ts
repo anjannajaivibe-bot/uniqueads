@@ -313,41 +313,39 @@ export async function convertQuotationToOrder(formData: FormData) {
     throw new Error("Quotation and campaign name are required.");
   }
 
-  const quotationRows = await sql`
-    SELECT
-      q.*,
-      l.company_name AS lead_company_name,
-      l.contact_person AS lead_contact_person,
-      l.phone AS lead_phone,
-      l.whatsapp AS lead_whatsapp,
-      l.email AS lead_email,
-      l.remarks AS lead_remarks,
-      l.customer_id AS lead_customer_id
-    FROM quotations q
-    LEFT JOIN leads l ON l.id = q.lead_id
-    WHERE q.id = ${quotationId}::uuid
-    LIMIT 1
-  `;
+  const orderNo = orderNumber();
+  const newCustomerCode = customerCode();
+  const advanceReceived = money(clean(formData.get("advance_received")));
+  const advertisingType = clean(formData.get("advertising_type"));
+  const startDate = clean(formData.get("start_date"));
+  const dueDate = clean(formData.get("due_date"));
+  const workInstructions = clean(formData.get("work_instructions"));
 
-  const quotation = quotationRows[0] as any;
-  if (!quotation) throw new Error("Quotation not found.");
-  if (quotation.status !== "accepted") {
-    throw new Error("Only an accepted quotation can be converted to an order.");
-  }
-
-  let customerId = quotation.customer_id
-    ? String(quotation.customer_id)
-    : quotation.lead_customer_id
-      ? String(quotation.lead_customer_id)
-      : null;
-
-  if (!customerId && quotation.lead_id) {
-    const code = customerCode();
-    const companyName =
-      String(quotation.lead_company_name || "").trim() ||
-      String(quotation.lead_contact_person || "").trim();
-
-    const customerRows = await sql`
+  // The entire conversion is one PostgreSQL statement. The quotation row is
+  // locked first, then customer creation, order creation, status changes and
+  // activity logs are committed together. A double-click or concurrent request
+  // cannot partially convert the same quotation.
+  const rows = await sql`
+    WITH quotation_data AS MATERIALIZED (
+      SELECT
+        q.id AS quotation_id,
+        q.lead_id,
+        q.customer_id,
+        q.grand_total,
+        l.customer_id AS lead_customer_id,
+        l.company_name AS lead_company_name,
+        l.contact_person AS lead_contact_person,
+        l.phone AS lead_phone,
+        l.whatsapp AS lead_whatsapp,
+        l.email AS lead_email,
+        l.remarks AS lead_remarks
+      FROM quotations q
+      LEFT JOIN leads l ON l.id = q.lead_id
+      WHERE q.id = ${quotationId}::uuid
+        AND q.status = 'accepted'
+      FOR UPDATE OF q
+    ),
+    created_customer AS (
       INSERT INTO customers (
         customer_code,
         company_name,
@@ -357,111 +355,176 @@ export async function convertQuotationToOrder(formData: FormData) {
         email,
         notes,
         created_by
-      ) VALUES (
-        ${code},
-        ${companyName},
-        ${quotation.lead_contact_person},
-        ${quotation.lead_phone},
-        ${quotation.lead_whatsapp},
-        ${quotation.lead_email},
-        ${quotation.lead_remarks},
-        ${currentUser.id}
       )
+      SELECT
+        ${newCustomerCode},
+        COALESCE(
+          NULLIF(BTRIM(lead_company_name), ''),
+          NULLIF(BTRIM(lead_contact_person), ''),
+          'Customer'
+        ),
+        lead_contact_person,
+        lead_phone,
+        lead_whatsapp,
+        lead_email,
+        lead_remarks,
+        ${currentUser.id}
+      FROM quotation_data
+      WHERE customer_id IS NULL
+        AND lead_customer_id IS NULL
+        AND lead_id IS NOT NULL
       RETURNING id
+    ),
+    resolved AS MATERIALIZED (
+      SELECT
+        qd.*,
+        COALESCE(
+          qd.customer_id,
+          qd.lead_customer_id,
+          (SELECT id FROM created_customer LIMIT 1)
+        ) AS resolved_customer_id
+      FROM quotation_data qd
+    ),
+    created_order AS (
+      INSERT INTO orders (
+        order_no,
+        quotation_id,
+        customer_id,
+        campaign_name,
+        advertising_type,
+        start_date,
+        due_date,
+        status,
+        total_order_amount,
+        advance_received,
+        work_instructions,
+        created_by
+      )
+      SELECT
+        ${orderNo},
+        quotation_id,
+        resolved_customer_id,
+        ${campaignName},
+        ${advertisingType},
+        ${startDate},
+        ${dueDate},
+        'order_received',
+        COALESCE(grand_total, 0),
+        ${advanceReceived},
+        ${workInstructions},
+        ${currentUser.id}
+      FROM resolved
+      WHERE resolved_customer_id IS NOT NULL
+      RETURNING id, order_no, quotation_id, customer_id
+    ),
+    updated_quotation AS (
+      UPDATE quotations q
+      SET
+        customer_id = r.resolved_customer_id,
+        status = 'converted',
+        updated_at = now()
+      FROM resolved r
+      WHERE q.id = r.quotation_id
+        AND EXISTS (SELECT 1 FROM created_order)
+      RETURNING q.id
+    ),
+    updated_lead AS (
+      UPDATE leads l
+      SET
+        status = 'won',
+        customer_id = r.resolved_customer_id,
+        updated_at = now()
+      FROM resolved r
+      WHERE l.id = r.lead_id
+        AND r.lead_id IS NOT NULL
+        AND EXISTS (SELECT 1 FROM created_order)
+      RETURNING l.id
+    ),
+    quotation_activity AS (
+      INSERT INTO activity_logs (
+        actor_user_id,
+        action,
+        entity_type,
+        entity_id,
+        description,
+        metadata
+      )
+      SELECT
+        ${currentUser.id},
+        'quotation_converted',
+        'quotation',
+        co.quotation_id,
+        'Quotation converted to order ' || co.order_no || '.',
+        jsonb_build_object('order_id', co.id, 'order_no', co.order_no)
+      FROM created_order co
+      WHERE EXISTS (SELECT 1 FROM updated_quotation)
+      RETURNING id
+    ),
+    order_activity AS (
+      INSERT INTO activity_logs (
+        actor_user_id,
+        action,
+        entity_type,
+        entity_id,
+        description,
+        metadata
+      )
+      SELECT
+        ${currentUser.id},
+        'order_created',
+        'order',
+        co.id,
+        'Order ' || co.order_no || ' created from quotation.',
+        jsonb_build_object('quotation_id', co.quotation_id)
+      FROM created_order co
+      WHERE EXISTS (SELECT 1 FROM updated_quotation)
+      RETURNING id
+    )
+    SELECT
+      co.id AS order_id,
+      co.order_no,
+      co.customer_id
+    FROM created_order co
+    WHERE EXISTS (SELECT 1 FROM updated_quotation)
+      AND EXISTS (SELECT 1 FROM quotation_activity)
+      AND EXISTS (SELECT 1 FROM order_activity)
+  `;
+
+  const order = rows[0] as any;
+
+  if (!order) {
+    const currentRows = await sql`
+      SELECT
+        q.status,
+        q.customer_id,
+        q.lead_id,
+        o.id AS existing_order_id
+      FROM quotations q
+      LEFT JOIN orders o ON o.quotation_id = q.id
+      WHERE q.id = ${quotationId}::uuid
+      ORDER BY o.created_at DESC NULLS LAST
+      LIMIT 1
     `;
 
-    customerId = String(customerRows[0].id);
+    const current = currentRows[0] as any;
+    if (!current) throw new Error("Quotation not found.");
 
-    await sql`
-      UPDATE leads
-      SET customer_id = ${customerId}::uuid, status = 'won', updated_at = now()
-      WHERE id = ${quotation.lead_id}::uuid
-    `;
+    if (current.existing_order_id) {
+      redirect(`/admin/orders/${current.existing_order_id}`);
+    }
 
-    await sql`
-      UPDATE quotations
-      SET customer_id = ${customerId}::uuid, updated_at = now()
-      WHERE id = ${quotationId}::uuid
-    `;
-  }
+    if (current.status !== "accepted") {
+      throw new Error("Only an accepted quotation can be converted to an order.");
+    }
 
-  if (!customerId) {
     throw new Error("A customer is required before converting the quotation.");
   }
-
-  const orderNo = orderNumber();
-  const advanceReceived = money(clean(formData.get("advance_received")));
-
-  const orderRows = await sql`
-    INSERT INTO orders (
-      order_no,
-      quotation_id,
-      customer_id,
-      campaign_name,
-      advertising_type,
-      start_date,
-      due_date,
-      status,
-      total_order_amount,
-      advance_received,
-      work_instructions,
-      created_by
-    ) VALUES (
-      ${orderNo},
-      ${quotationId}::uuid,
-      ${customerId}::uuid,
-      ${campaignName},
-      ${clean(formData.get("advertising_type"))},
-      ${clean(formData.get("start_date"))},
-      ${clean(formData.get("due_date"))},
-      'order_received',
-      ${Number(quotation.grand_total || 0)},
-      ${advanceReceived},
-      ${clean(formData.get("work_instructions"))},
-      ${currentUser.id}
-    )
-    RETURNING id
-  `;
-
-  const orderId = String(orderRows[0].id);
-
-  await sql`
-    UPDATE quotations
-    SET status = 'converted', updated_at = now()
-    WHERE id = ${quotationId}::uuid
-  `;
-
-  if (quotation.lead_id) {
-    await sql`
-      UPDATE leads
-      SET status = 'won', customer_id = ${customerId}::uuid, updated_at = now()
-      WHERE id = ${quotation.lead_id}::uuid
-    `;
-  }
-
-  await logActivity(
-    currentUser.id,
-    "quotation",
-    quotationId,
-    "quotation_converted",
-    `Quotation converted to order ${orderNo}.`,
-    { order_id: orderId, order_no: orderNo }
-  );
-
-  await logActivity(
-    currentUser.id,
-    "order",
-    orderId,
-    "order_created",
-    `Order ${orderNo} created from quotation.`,
-    { quotation_id: quotationId }
-  );
 
   revalidatePath("/admin");
   revalidatePath("/admin/quotations");
   revalidatePath("/admin/orders");
   revalidatePath("/admin/leads");
-  redirect(`/admin/orders/${orderId}`);
+  redirect(`/admin/orders/${order.order_id}`);
 }
 
 
