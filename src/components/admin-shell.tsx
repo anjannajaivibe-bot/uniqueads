@@ -41,7 +41,9 @@ export function AdminSidebar({
 }) {
   const pathname = usePathname();
   const visibleNavigation = navigation.filter(
-    (item) => !item.roles || roleAllowed(currentUser.role, item.roles)
+    (item) => currentUser.role === "supervisor"
+      ? ["/admin", "/admin/work-progress"].includes(item.href)
+      : !item.roles || roleAllowed(currentUser.role, item.roles)
   );
 
   return (
@@ -68,7 +70,7 @@ export function AdminSidebar({
             <span className="nav-icon" aria-hidden="true">
               {icon}
             </span>
-            <span>{label}</span>
+            <span>{currentUser.role === "supervisor" && href === "/admin" ? "Home" : currentUser.role === "supervisor" && href === "/admin/work-progress" ? "My Work" : label}</span>
           </Link>
         ))}
       </nav>
@@ -86,7 +88,7 @@ export function AdminTopbar({
   currentUser: CurrentAppUser;
 }) {
   const pathname = usePathname();
-  const visibleNavigation = navigation.filter((item) => !item.roles || roleAllowed(currentUser.role, item.roles));
+  const visibleNavigation = navigation.filter((item) => currentUser.role === "supervisor" ? ["/admin", "/admin/work-progress"].includes(item.href) : !item.roles || roleAllowed(currentUser.role, item.roles));
   const currentPage = [...visibleNavigation].reverse().find((item) => pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/")));
   return (
     <header className="topbar">
@@ -100,7 +102,8 @@ export function AdminTopbar({
         <details className="mobile-menu">
           <summary aria-label="Open main menu">☰ <span>Menu</span></summary>
           <nav aria-label="Mobile navigation" className="mobile-menu-links">
-            {visibleNavigation.map(({label, href, icon}) => <Link key={href} href={href} className="mobile-menu-link"><span aria-hidden="true">{icon}</span>{label}</Link>)}
+            {visibleNavigation.map(({label, href, icon}) => <Link key={href} href={href} className="mobile-menu-link"><span aria-hidden="true">{icon}</span>{currentUser.role === "supervisor" && href === "/admin" ? "Home" : currentUser.role === "supervisor" && href === "/admin/work-progress" ? "My Work" : label}</Link>)}
+            {currentUser.role === "supervisor" ? <Link href="/admin/work-progress/live-capture" className="mobile-menu-link"><span aria-hidden="true">▧</span>Take Work Photo</Link> : null}
             <a href="/api/app-auth/logout" className="mobile-menu-link">↪ Sign out</a>
           </nav>
         </details>
