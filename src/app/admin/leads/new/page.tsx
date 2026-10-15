@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireRoles, ACCESS } from "@/lib/auth/permissions";
 import { PageHeader } from "@/components/ui";
 import { createLead } from "../../actions";
 import { getAssignableUsers } from "@/lib/lead-queries";
@@ -6,6 +7,7 @@ import { getAssignableUsers } from "@/lib/lead-queries";
 export const dynamic = "force-dynamic";
 
 export default async function NewLeadPage() {
+  await requireRoles(ACCESS.operations);
   const users = await getAssignableUsers();
 
   return (
