@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { addWorkUpdate } from "@/app/admin/work-progress/actions";
+
+function SaveUpdateButton() {
+  const { pending } = useFormStatus();
+  return <button type="submit" disabled={pending} className="button button-primary" aria-live="polite">
+    {pending ? "Saving your update..." : "Save Update"}
+  </button>;
+}
 
 export function WorkUpdateForm({
   locationId,
@@ -55,18 +63,18 @@ export function WorkUpdateForm({
 
       <div className="form-grid">
         <label>
-          <span>Work Status *</span>
+          <span>1. What is happening?</span>
           <select name="status" defaultValue="in_progress" required>
-            <option value="started">Started</option>
-            <option value="in_progress">In Progress</option>
-            <option value="paused">Paused</option>
-            <option value="quality_check">Quality Check</option>
-            <option value="issue">Issue / Blocked</option>
+            <option value="started">Work Started</option>
+            <option value="in_progress">Work Going On</option>
+            <option value="paused">Work Paused</option>
+            <option value="quality_check">Ready for Checking</option>
+            <option value="issue">Problem at Site</option>
           </select>
         </label>
 
         <label>
-          <span>Progress %</span>
+          <span>2. How much work is done? (%)</span>
           <input
             name="progress_percent"
             type="number"
@@ -97,11 +105,11 @@ export function WorkUpdateForm({
         </div>
 
         <label className="full">
-          <span>Progress Update / Site Notes</span>
+          <span>3. Notes (optional)</span>
           <textarea
             name="update_text"
             rows={4}
-            placeholder="Work completed today, material issues, customer feedback, next action..."
+            placeholder="Write a short note, if needed"
           />
         </label>
       </div>
@@ -110,9 +118,7 @@ export function WorkUpdateForm({
         <a href="/admin/work-progress/live-capture" className="button button-secondary">
           Complete with Live Photo
         </a>
-        <button type="submit" className="button button-primary">
-          Save Work Update
-        </button>
+        <SaveUpdateButton />
       </div>
     </form>
   );
