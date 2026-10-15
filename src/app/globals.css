@@ -223,3 +223,7 @@ button,input,select,textarea{touch-action:manipulation}
  .easy-camera button{min-height:52px;font-size:16px}
  .easy-camera>div:last-child{width:100%}
 }
+
+/* Keep the dropdown truly hidden until the user taps Menu. */
+.mobile-menu:not([open])>.mobile-menu-links{display:none!important}
+.mobile-menu[open]>.mobile-menu-links{display:grid}
