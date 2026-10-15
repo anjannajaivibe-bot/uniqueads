@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireAppUser } from "@/lib/auth/authorization";
 import { PageHeader, StatCard } from "@/components/ui";
 import { LeadsTable } from "@/components/leads-table";
 import { getLeadList, getLeadPipelineCounts } from "@/lib/lead-queries";
@@ -6,9 +7,10 @@ import { getLeadList, getLeadPipelineCounts } from "@/lib/lead-queries";
 export const dynamic = "force-dynamic";
 
 export default async function LeadsPage() {
+  const currentUser = await requireAppUser();
   const [rows, counts] = await Promise.all([
-    getLeadList(),
-    getLeadPipelineCounts(),
+    getLeadList(currentUser),
+    getLeadPipelineCounts(currentUser),
   ]);
 
   const leads = rows.map((row: any) => ({
@@ -25,11 +27,11 @@ export default async function LeadsPage() {
       <PageHeader
         title="Leads"
         description="Control every enquiry, assignment and follow-up from first contact through conversion."
-        action={
+        action={currentUser.role !== "sales" ?
           <Link href="/admin/leads/new" className="button button-primary">
             + Add Lead
           </Link>
-        }
+        : null}
       />
 
       <div className="lead-stats">
