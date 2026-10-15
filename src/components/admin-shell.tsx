@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { CurrentAppUser } from "@/lib/auth/authorization";
@@ -88,6 +89,13 @@ export function AdminTopbar({
   currentUser: CurrentAppUser;
 }) {
   const pathname = usePathname();
+  const mobileMenuRef = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (mobileMenuRef.current) mobileMenuRef.current.open = false;
+  }, [pathname]);
+  const closeMobileMenu = () => {
+    if (mobileMenuRef.current) mobileMenuRef.current.open = false;
+  };
   const visibleNavigation = navigation.filter((item) => currentUser.role === "supervisor" ? ["/admin", "/admin/work-progress"].includes(item.href) : !item.roles || roleAllowed(currentUser.role, item.roles));
   const currentPage = [...visibleNavigation].reverse().find((item) => pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/")));
   return (
@@ -99,11 +107,11 @@ export function AdminTopbar({
       </div>
 
       <div className="topbar-actions">
-        <details className="mobile-menu">
+        <details ref={mobileMenuRef} className="mobile-menu">
           <summary aria-label="Open main menu">☰ <span>Menu</span></summary>
           <nav aria-label="Mobile navigation" className="mobile-menu-links">
-            {visibleNavigation.map(({label, href, icon}) => <Link key={href} href={href} className="mobile-menu-link"><span aria-hidden="true">{icon}</span>{currentUser.role === "supervisor" && href === "/admin" ? "Home" : currentUser.role === "supervisor" && href === "/admin/work-progress" ? "My Work" : label}</Link>)}
-            {currentUser.role === "supervisor" ? <Link href="/admin/work-progress/live-capture" className="mobile-menu-link"><span aria-hidden="true">▧</span>Take Work Photo</Link> : null}
+            {visibleNavigation.map(({label, href, icon}) => <Link key={href} href={href} onClick={closeMobileMenu} className="mobile-menu-link"><span aria-hidden="true">{icon}</span>{currentUser.role === "supervisor" && href === "/admin" ? "Home" : currentUser.role === "supervisor" && href === "/admin/work-progress" ? "My Work" : label}</Link>)}
+            {currentUser.role === "supervisor" ? <Link href="/admin/work-progress/live-capture" onClick={closeMobileMenu} className="mobile-menu-link"><span aria-hidden="true">▧</span>Take Work Photo</Link> : null}
             <a href="/api/app-auth/logout" className="mobile-menu-link">↪ Sign out</a>
           </nav>
         </details>
