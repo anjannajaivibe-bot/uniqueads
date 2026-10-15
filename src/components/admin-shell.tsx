@@ -1,3 +1,6 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { CurrentAppUser } from "@/lib/auth/authorization";
@@ -28,6 +31,7 @@ export function AdminSidebar({
 }: {
   currentUser: CurrentAppUser;
 }) {
+  const pathname = usePathname();
   const visibleNavigation = navigation.filter(
     (item) => !item.roles || roleAllowed(currentUser.role, item.roles)
   );
@@ -52,7 +56,7 @@ export function AdminSidebar({
 
       <nav className="side-nav" aria-label="Admin navigation">
         {visibleNavigation.map(({ label, href, icon }) => (
-          <Link href={href} key={href} className="nav-link">
+          <Link href={href} key={href} className={`nav-link ${pathname === href || (href !== "/admin" && pathname.startsWith(href + "/")) ? "nav-active" : ""}`}>
             <span className="nav-icon" aria-hidden="true">
               {icon}
             </span>
@@ -73,14 +77,25 @@ export function AdminTopbar({
 }: {
   currentUser: CurrentAppUser;
 }) {
+  const pathname = usePathname();
+  const visibleNavigation = navigation.filter((item) => !item.roles || roleAllowed(currentUser.role, item.roles));
+  const currentPage = [...visibleNavigation].reverse().find((item) => pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/")));
   return (
     <header className="topbar">
       <div>
         <p className="topbar-kicker">Unique Ads</p>
-        <strong>Operational Control Center</strong>
+        <strong className="desktop-title">Operational Control Center</strong>
+        <strong className="mobile-title">{currentPage?.label ?? "Home"}</strong>
       </div>
 
       <div className="topbar-actions">
+        <details className="mobile-menu">
+          <summary aria-label="Open main menu">☰ <span>Menu</span></summary>
+          <nav aria-label="Mobile navigation" className="mobile-menu-links">
+            {visibleNavigation.map(({label, href, icon}) => <Link key={href} href={href} className="mobile-menu-link"><span aria-hidden="true">{icon}</span>{label}</Link>)}
+            <a href="/api/app-auth/logout" className="mobile-menu-link">↪ Sign out</a>
+          </nav>
+        </details>
         {roleAllowed(currentUser.role, ACCESS.sales) ? (
           <Link href="/admin/leads/new" className="button button-primary">
             + New Lead
