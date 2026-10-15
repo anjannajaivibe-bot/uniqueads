@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db";
+import type { CurrentAppUser } from "@/lib/auth/authorization";
 
-export async function getLeadList() {
+export async function getLeadList(user?: CurrentAppUser) {
   return sql`
     SELECT
       l.id,
@@ -22,6 +23,7 @@ export async function getLeadList() {
       u.full_name AS assigned_to_name
     FROM leads l
     LEFT JOIN app_users u ON u.id = l.assigned_to
+    WHERE (${user?.role !== "sales"} OR l.assigned_to = ${user?.id ?? null}::uuid)
     ORDER BY
       CASE
         WHEN l.next_follow_up_at IS NOT NULL
@@ -35,7 +37,7 @@ export async function getLeadList() {
   `;
 }
 
-export async function getLeadById(id: string) {
+export async function getLeadById(id: string, user?: CurrentAppUser) {
   const rows = await sql`
     SELECT
       l.*,
@@ -48,6 +50,7 @@ export async function getLeadById(id: string) {
     LEFT JOIN app_users creator ON creator.id = l.created_by
     LEFT JOIN customers c ON c.id = l.customer_id
     WHERE l.id = ${id}
+      AND (${user?.role !== "sales"} OR l.assigned_to = ${user?.id ?? null}::uuid)
     LIMIT 1
   `;
   return rows[0] ?? null;
@@ -108,7 +111,7 @@ export async function getAssignableUsers() {
   `;
 }
 
-export async function getLeadPipelineCounts() {
+export async function getLeadPipelineCounts(user?: CurrentAppUser) {
   const rows = await sql`
     SELECT
       count(*) FILTER (WHERE status = 'new')::int AS new_count,
@@ -124,6 +127,7 @@ export async function getLeadPipelineCounts() {
           AND status NOT IN ('won', 'lost')
       )::int AS overdue_count
     FROM leads
+    WHERE (${user?.role !== "sales"} OR assigned_to = ${user?.id ?? null}::uuid)
   `;
   return rows[0];
 }
