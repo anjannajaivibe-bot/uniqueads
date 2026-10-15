@@ -42,7 +42,7 @@ async function logCustomerActivity(
 }
 
 export async function createCustomer(formData: FormData) {
-  const currentUser = await requireRoles(ACCESS.sales);
+  const currentUser = await requireRoles(ACCESS.operations);
 
   const companyName = clean(formData.get("company_name"));
   if (!companyName) throw new Error("Company / customer name is required.");
@@ -101,7 +101,7 @@ export async function createCustomer(formData: FormData) {
 }
 
 export async function updateCustomer(formData: FormData) {
-  const currentUser = await requireRoles(ACCESS.sales);
+  const currentUser = await requireRoles(ACCESS.operations);
 
   const customerId = clean(formData.get("customer_id"));
   const companyName = clean(formData.get("company_name"));
@@ -141,7 +141,7 @@ export async function updateCustomer(formData: FormData) {
 }
 
 export async function toggleCustomerActive(formData: FormData) {
-  const currentUser = await requireRoles(ACCESS.sales);
+  const currentUser = await requireRoles(ACCESS.operations);
 
   const customerId = clean(formData.get("customer_id"));
   const nextActive = clean(formData.get("next_active")) === "true";
