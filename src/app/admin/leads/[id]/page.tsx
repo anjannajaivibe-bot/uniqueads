@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireAppUser } from "@/lib/auth/authorization";
 import { notFound } from "next/navigation";
 import { PageHeader, Status } from "@/components/ui";
 import {
@@ -62,9 +63,10 @@ export default async function LeadDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const currentUser = await requireAppUser();
 
   const [lead, followups, activity, users] = await Promise.all([
-    getLeadById(id),
+    getLeadById(id, currentUser),
     getLeadFollowups(id),
     getLeadActivity(id),
     getAssignableUsers(),
@@ -164,7 +166,7 @@ export default async function LeadDetailPage({
             ) : null}
           </article>
 
-          <article className="form-card">
+          {currentUser.role !== "sales" ? <article className="form-card">
             <div className="form-section-title">
               <div>
                 <h2>Edit Lead</h2>
@@ -286,7 +288,7 @@ export default async function LeadDetailPage({
                 </button>
               </div>
             </form>
-          </article>
+          </article> : null}
 
           <article className="form-card">
             <div className="form-section-title">
