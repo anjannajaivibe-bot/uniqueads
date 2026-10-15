@@ -91,7 +91,7 @@ async function logActivity(
 }
 
 export async function createQuotation(formData: FormData) {
-  const currentUser = await requireRoles(ACCESS.sales);
+  const currentUser = await requireRoles(ACCESS.operations);
 
   const leadId = clean(formData.get("lead_id"));
   let customerId = clean(formData.get("customer_id"));
@@ -260,7 +260,7 @@ export async function createQuotation(formData: FormData) {
 }
 
 export async function updateQuotationStatus(formData: FormData) {
-  const currentUser = await requireRoles(ACCESS.sales);
+  const currentUser = await requireRoles(ACCESS.operations);
   const quotationId = clean(formData.get("quotation_id"));
   const status = clean(formData.get("status"));
 
@@ -304,7 +304,7 @@ export async function updateQuotationStatus(formData: FormData) {
 }
 
 export async function convertQuotationToOrder(formData: FormData) {
-  const currentUser = await requireRoles(ACCESS.sales);
+  const currentUser = await requireRoles(ACCESS.operations);
 
   const quotationId = clean(formData.get("quotation_id"));
   const campaignName = clean(formData.get("campaign_name"));
