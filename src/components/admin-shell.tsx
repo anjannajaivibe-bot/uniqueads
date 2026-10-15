@@ -4,7 +4,15 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { CurrentAppUser } from "@/lib/auth/authorization";
-import { ACCESS, roleAllowed } from "@/lib/auth/permissions";
+// Client-safe display permissions. Actual access remains enforced on the server.
+const ACCESS = {
+ sales: ["super_admin", "operations_manager", "sales"],
+ field: ["super_admin", "operations_manager", "supervisor"],
+ finance: ["super_admin", "accounts"],
+ reports: ["super_admin", "accounts", "operations_manager"],
+ settings: ["super_admin"]
+};
+function roleAllowed(role: string, allowed: readonly string[]) { return allowed.includes(role); }
 
 const navigation = [
   { label: "Dashboard", href: "/admin", icon: "▦", roles: null },
