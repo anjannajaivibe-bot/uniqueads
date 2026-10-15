@@ -7,6 +7,36 @@ import { ACCESS, roleAllowed } from "@/lib/auth/permissions";
 
 export default async function DashboardPage() {
   const currentUser = await requireAppUser();
+  if (currentUser.role === "supervisor") {
+    return (
+      <div className="easy-home">
+        <div className="easy-welcome">
+          <p>Welcome, {currentUser.full_name}</p>
+          <h1>My Work</h1>
+          <span>Choose what you want to do.</span>
+        </div>
+        <div className="easy-actions">
+          <Link className="easy-action" href="/admin/work-progress">
+            <span className="easy-action-icon">▣</span>
+            <strong>My Work Locations</strong>
+            <small>See your assigned jobs</small>
+          </Link>
+          <Link className="easy-action easy-action-main" href="/admin/work-progress/live-capture">
+            <span className="easy-action-icon">▧</span>
+            <strong>Take Work Photo</strong>
+            <small>Update work using the camera</small>
+          </Link>
+          <Link className="easy-action" href="/admin/work-progress">
+            <span className="easy-action-icon">✓</span>
+            <strong>Check Progress</strong>
+            <small>View completed and pending jobs</small>
+          </Link>
+        </div>
+        <p className="easy-hint">To mark work completed, use Take Work Photo and choose Completion.</p>
+      </div>
+    );
+  }
+
   const canSales = roleAllowed(currentUser.role, ACCESS.sales);
   const canField = roleAllowed(currentUser.role, ACCESS.field);
   const canFinance = roleAllowed(currentUser.role, ACCESS.finance);
