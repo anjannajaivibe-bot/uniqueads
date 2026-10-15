@@ -51,6 +51,7 @@ export function LiveCaptureClient({
   const [cameraReady, setCameraReady] = useState(false);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const submittingRef = useRef(false);
   const [markCompleted, setMarkCompleted] = useState(false);
 
   const selectedLocation = useMemo(
@@ -234,6 +235,7 @@ export function LiveCaptureClient({
   }
 
   async function submitPhoto() {
+    if (submittingRef.current) return;
     if (
       !capturedBlob ||
       !capturedAt ||
@@ -248,8 +250,9 @@ export function LiveCaptureClient({
       setProgress(100);
     }
 
+    submittingRef.current = true;
     setBusy(true);
-    setStatus("Uploading live photo...");
+    setStatus("Saving your photo. Please keep this page open...");
 
     try {
       const form = new FormData();
@@ -271,10 +274,18 @@ export function LiveCaptureClient({
         String(photoType === "completed" && markCompleted)
       );
 
-      const response = await fetch("/api/work-photos/live-upload", {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 60000);
+      let response: Response;
+      try {
+        response = await fetch("/api/work-photos/live-upload", {
+          signal: controller.signal,
         method: "POST",
         body: form,
-      });
+        });
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
 
       const result = await response.json();
 
@@ -298,9 +309,12 @@ export function LiveCaptureClient({
       }
     } catch (error) {
       setStatus(
-        error instanceof Error ? error.message : "Unable to upload photo."
+        error instanceof Error && error.name === "AbortError"
+          ? "The connection is slow. Check your work photo history before trying again to avoid duplicates."
+          : error instanceof Error ? error.message : "Photo not saved. Check your internet and try again."
       );
     } finally {
+      submittingRef.current = false;
       setBusy(false);
     }
   }
@@ -334,7 +348,7 @@ export function LiveCaptureClient({
       >
         <label>
           <div style={{ fontWeight: 800, marginBottom: 6 }}>
-            Work Location
+            1. Select Your Work
           </div>
           <select
             value={selectedLocationId}
@@ -392,7 +406,7 @@ export function LiveCaptureClient({
         >
           <label>
             <div style={{ fontWeight: 800, marginBottom: 6 }}>
-              Photo Stage
+              2. Choose Photo Type
             </div>
             <select
               value={photoType}
@@ -412,7 +426,7 @@ export function LiveCaptureClient({
 
           <label>
             <div style={{ fontWeight: 800, marginBottom: 6 }}>
-              Progress %
+              Work Done (%)
             </div>
             <input
               type="number"
@@ -430,7 +444,7 @@ export function LiveCaptureClient({
 
         <label>
           <div style={{ fontWeight: 800, marginBottom: 6 }}>
-            Work Note
+            Note (optional)
           </div>
           <textarea
             value={note}
@@ -455,7 +469,7 @@ export function LiveCaptureClient({
         ) : null}
       </section>
 
-      <section
+      <section className="easy-camera"
         style={{
           background: "#071c3b",
           color: "white",
@@ -530,7 +544,7 @@ export function LiveCaptureClient({
               cursor: "pointer",
             }}
           >
-            Start Live Camera
+            3. Open Camera
           </button>
 
           <button
@@ -547,7 +561,7 @@ export function LiveCaptureClient({
               cursor: "pointer",
             }}
           >
-            Capture Live Photo
+            4. Take Photo
           </button>
 
           <button
@@ -564,12 +578,12 @@ export function LiveCaptureClient({
               cursor: "pointer",
             }}
           >
-            {busy ? "Saving..." : "Save Work Progress"}
+            {busy ? "Saving..." : "5. Save Photo"}
           </button>
         </div>
 
         {status ? (
-          <div
+          <div role="status" aria-live="polite"
             style={{
               padding: 11,
               borderRadius: 9,
