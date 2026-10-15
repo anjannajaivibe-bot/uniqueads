@@ -64,7 +64,7 @@ async function logLeadActivity(
 }
 
 export async function createLead(formData: FormData) {
-  const currentUser = await requireRoles(ACCESS.sales);
+  const currentUser = await requireRoles(ACCESS.operations);
 
   const contactPerson = clean(formData.get("contact_person"));
   const phone = clean(formData.get("phone"));
@@ -134,7 +134,7 @@ export async function createLead(formData: FormData) {
 }
 
 export async function updateLead(formData: FormData) {
-  const currentUser = await requireRoles(ACCESS.sales);
+  const currentUser = await requireRoles(ACCESS.operations);
 
   const leadId = clean(formData.get("lead_id"));
   const contactPerson = clean(formData.get("contact_person"));
@@ -180,6 +180,11 @@ export async function updateLead(formData: FormData) {
 
 export async function updateLeadStatus(formData: FormData) {
   const currentUser = await requireRoles(ACCESS.sales);
+  const assignedLeadId = clean(formData.get("lead_id"));
+  if (currentUser.role === "sales") {
+    const mine = assignedLeadId ? await sql`SELECT 1 FROM leads WHERE id = ${assignedLeadId}::uuid AND assigned_to = ${currentUser.id}::uuid LIMIT 1` : [];
+    if (!mine.length) throw new Error("You can only update leads assigned to you.");
+  }
 
   const leadId = clean(formData.get("lead_id"));
   const status = clean(formData.get("status"));
@@ -230,6 +235,11 @@ export async function updateLeadStatus(formData: FormData) {
 
 export async function addLeadFollowup(formData: FormData) {
   const currentUser = await requireRoles(ACCESS.sales);
+  const assignedLeadId = clean(formData.get("lead_id"));
+  if (currentUser.role === "sales") {
+    const mine = assignedLeadId ? await sql`SELECT 1 FROM leads WHERE id = ${assignedLeadId}::uuid AND assigned_to = ${currentUser.id}::uuid LIMIT 1` : [];
+    if (!mine.length) throw new Error("You can only update leads assigned to you.");
+  }
 
   const leadId = clean(formData.get("lead_id"));
   const channel = clean(formData.get("channel"));
@@ -292,7 +302,7 @@ export async function addLeadFollowup(formData: FormData) {
 }
 
 export async function convertLeadToCustomer(formData: FormData) {
-  const currentUser = await requireRoles(ACCESS.sales);
+  const currentUser = await requireRoles(ACCESS.operations);
   const leadId = clean(formData.get("lead_id"));
 
   if (!leadId) {
