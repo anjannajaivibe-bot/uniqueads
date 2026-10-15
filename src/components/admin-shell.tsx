@@ -42,7 +42,7 @@ export function AdminSidebar({
 }) {
   const pathname = usePathname();
   const visibleNavigation = navigation.filter(
-    (item) => currentUser.role === "supervisor"
+    (item) => currentUser.role === "sales" ? ["/admin", "/admin/leads"].includes(item.href) : currentUser.role === "supervisor"
       ? ["/admin", "/admin/work-progress"].includes(item.href)
       : !item.roles || roleAllowed(currentUser.role, item.roles)
   );
@@ -96,7 +96,7 @@ export function AdminTopbar({
   const closeMobileMenu = () => {
     if (mobileMenuRef.current) mobileMenuRef.current.open = false;
   };
-  const visibleNavigation = navigation.filter((item) => currentUser.role === "supervisor" ? ["/admin", "/admin/work-progress"].includes(item.href) : !item.roles || roleAllowed(currentUser.role, item.roles));
+  const visibleNavigation = navigation.filter((item) => currentUser.role === "sales" ? ["/admin", "/admin/leads"].includes(item.href) : currentUser.role === "supervisor" ? ["/admin", "/admin/work-progress"].includes(item.href) : !item.roles || roleAllowed(currentUser.role, item.roles));
   const currentPage = [...visibleNavigation].reverse().find((item) => pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/")));
   return (
     <header className="topbar">
@@ -115,7 +115,7 @@ export function AdminTopbar({
             <a href="/api/app-auth/logout" className="mobile-menu-link">↪ Sign out</a>
           </nav>
         </details>
-        {roleAllowed(currentUser.role, ACCESS.sales) ? (
+        {currentUser.role === "super_admin" || currentUser.role === "operations_manager" ? (
           <Link href="/admin/leads/new" className="button button-primary">
             + New Lead
           </Link>
