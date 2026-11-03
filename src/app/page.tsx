@@ -4,182 +4,221 @@ import { MarketingInquiry } from "@/components/marketing-inquiry";
 import "./landing.css";
 
 export const metadata: Metadata = {
-  title: "Unique Ads | Wall Painting & Hoarding Advertising",
-  description: "Make your brand visible on the streets. Unique Ads offers wall painting advertisements and outdoor hoardings across Telangana, Andhra Pradesh and Karnataka. Enquire for a campaign quote.",
-  keywords: ["wall painting advertising", "hoarding advertising", "outdoor advertising Telangana", "wall branding Andhra Pradesh", "outdoor branding Karnataka", "Unique Ads"],
+  title: "Unique Ads | Wall Painting & Outdoor Hoarding Advertising",
+  description:
+    "Wall painting advertising and outdoor hoardings across Telangana, Andhra Pradesh and Karnataka. Plan your next out-of-home branding campaign with Unique Ads.",
+  keywords: [
+    "wall painting advertising",
+    "outdoor hoarding advertising",
+    "wall advertisements Telangana",
+    "outdoor advertising Andhra Pradesh",
+    "hoardings Karnataka",
+    "Unique Ads",
+  ],
   openGraph: {
-    title: "Unique Ads | Make Your Brand Impossible to Miss",
-    description: "Wall painting advertisements and outdoor hoardings across Telangana, Andhra Pradesh and Karnataka.",
-    siteName: "Unique Ads",
+    title: "Unique Ads | Advertising made for the outside world",
+    description:
+      "Wall painting advertising and outdoor hoardings across Telangana, Andhra Pradesh and Karnataka.",
     type: "website",
+    siteName: "Unique Ads",
   },
   robots: { index: true, follow: true },
 };
 
-const CONTACT_PHONE = "+919666566532";
-const WHATSAPP_URL = "https://wa.me/919666566532";
+const phone = "+919666566532";
+const whatsapp = "https://wa.me/919666566532";
 
-const photos = {
-  mural: "https://images.unsplash.com/photo-1738854710640-0f9a7dd908d0?auto=format&fit=crop&w=1500&q=80",
-  hoarding: "https://images.pexels.com/photos/8181296/pexels-photo-8181296.jpeg?auto=compress&cs=tinysrgb&w=1300",
-  street: "https://images.pexels.com/photos/2119903/pexels-photo-2119903.jpeg?auto=compress&cs=tinysrgb&w=1300",
-};
+const steps = [
+  { number: "01", title: "Share your brief", detail: "Tell us about your business, intended audience and campaign locations." },
+  { number: "02", title: "Select the format", detail: "Discuss the right mix of painted walls and outdoor hoardings for your goals." },
+  { number: "03", title: "Plan the execution", detail: "Confirm the proposed locations, scope and creative requirements." },
+  { number: "04", title: "Take it outdoors", detail: "Coordinate the approved execution and review campaign deliverables." },
+];
 
-const Arrow = ({ diagonal = false }: { diagonal?: boolean }) => (
-  <span className="ua-arrow" aria-hidden="true">{diagonal ? "↗" : "→"}</span>
-);
+function Arrow({ external = false }: { external?: boolean }) {
+  return <span aria-hidden="true">{external ? "↗" : "→"}</span>;
+}
+
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return <span className="ua-eyebrow"><span className="ua-small-rule" />{children}</span>;
+}
 
 export default function Home() {
   return (
-    <main className="ua-site" id="top">
-      <div className="ua-announcement">
-        <span className="ua-announcement-dot" />
-        OUTDOOR BRANDING THAT GOES BEYOND THE SCREEN
-        <span className="ua-announcement-side">TELANGANA · ANDHRA PRADESH · KARNATAKA</span>
+    <main id="top" className="ua-site">
+      <div className="ua-topline">
+        <span>UNIQUE ADS <span className="ua-topline-slash">/</span> OUT-OF-HOME BRANDING</span>
+        <span>TELANGANA · ANDHRA PRADESH · KARNATAKA</span>
       </div>
 
       <header className="ua-header">
-        <a className="ua-logo" href="#top" aria-label="Unique Ads home">
-          <span className="ua-logomark" aria-hidden="true"><i /><i /><i /></span>
-          <span className="ua-logotext"><strong>UNIQUE<span>ADS</span></strong><small>OUTDOOR ADVERTISING</small></span>
+        <a href="#top" aria-label="Unique Ads homepage" className="ua-wordmark">
+          <Image src="/unique-ads-logo.png" width={62} height={62} alt="" priority className="ua-brand-image" />
+          <span><strong>UNIQUE <i>ADS</i></strong><small>OUTDOOR BRANDING</small></span>
         </a>
-        <nav className="ua-nav" aria-label="Main navigation">
-          <a href="#services">What we do</a><a href="#formats">Our formats</a>
-          <a href="#approach">How we work</a><a href="#reach">Our reach</a>
+        <nav className="ua-desktop-nav" aria-label="Primary navigation">
+          <a href="#about">About</a>
+          <a href="#formats">What we do</a>
+          <a href="#approach">Our approach</a>
+          <a href="#coverage">Where we work</a>
         </nav>
-        <a className="ua-header-cta" href="#contact">Plan a campaign <Arrow diagonal /></a>
-        <details className="ua-mobile-nav">
-          <summary aria-label="Open website menu"><span /><span /><span /></summary>
+        <a className="ua-nav-quote" href="#contact">Discuss a project <Arrow external /></a>
+        <details className="ua-mobile-menu">
+          <summary aria-label="Open navigation"><span /><span /><span /></summary>
           <nav aria-label="Mobile navigation">
-            <a href="#services">What we do</a><a href="#formats">Our formats</a>
-            <a href="#approach">How we work</a><a href="#reach">Our reach</a>
-            <a href="#contact">Contact us</a><a href="/admin">Staff login</a>
+            <a href="#about">About</a><a href="#formats">What we do</a>
+            <a href="#approach">Our approach</a><a href="#coverage">Where we work</a>
+            <a href="#contact">Enquire</a><a href="/admin">Staff login</a>
           </nav>
         </details>
       </header>
 
       <section className="ua-hero" aria-labelledby="ua-hero-title">
-        <div className="ua-hero-content">
-          <span className="ua-kicker ua-kicker-light"><span /> REAL-WORLD BRAND VISIBILITY</span>
-          <h1 id="ua-hero-title">MAKE YOUR<br />BRAND <em>IMPOSSIBLE</em><br />TO <span>IGNORE.</span></h1>
-          <p>From walls that become landmarks to hoardings that command attention. We bring your brand into the everyday journeys of your customers.</p>
-          <div className="ua-hero-actions">
-            <a className="ua-btn ua-btn-orange" href="#contact">Get a campaign quote <Arrow diagonal /></a>
-            <a className="ua-hero-link" href="#formats">Explore our work formats <Arrow /></a>
+        <div className="ua-hero-copy">
+          <div className="ua-hero-top"><Eyebrow>WALL PAINTING & OUTDOOR MEDIA</Eyebrow><span>EST. IN THE REAL WORLD</span></div>
+          <h1 id="ua-hero-title">Your brand<br />belongs <em>out<br />in the world.</em></h1>
+          <div className="ua-hero-lower">
+            <p>We make brands visible beyond the screen, through wall painting advertisements and outdoor hoardings in the places people travel every day.</p>
+            <a href="#contact" className="ua-link-arrow">Start a conversation <Arrow external /></a>
           </div>
-          <div className="ua-hero-bottom"><span className="ua-live-indicator" /> YOUR BRAND. OUT IN THE WORLD.</div>
+          <div className="ua-hero-index"><span>01 / 05</span><span>THE ART OF BEING SEEN</span></div>
         </div>
-        <div className="ua-hero-image">
-          <Image src={photos.mural} alt="Artists painting a vibrant street wall mural, illustrating outdoor wall branding" width={1500} height={1200} priority unoptimized sizes="(max-width: 850px) 100vw, 48vw" />
-          <span className="ua-photo-tag"><b>01 / THE STREET IS YOUR CANVAS</b><small>Illustrative photograph, not a completed Unique Ads project</small></span>
-          <span className="ua-hero-image-corner" aria-hidden="true">UA.</span>
-        </div>
+        <figure className="ua-hero-photo">
+          <Image src="/marketing/editorial-wall-painting.jpg" alt="Illustration of painters creating a large navy and orange advertisement on a roadside wall" fill priority sizes="(max-width: 850px) 100vw, 50vw" />
+          <figcaption><span>FIG. 01</span> A WALL CAN BECOME A CANVAS.<small>Concept image illustrating the format, not a documented Unique Ads project.</small></figcaption>
+        </figure>
       </section>
 
-      <div className="ua-ticker" aria-label="Advertising formats">
-        <div>WALL PAINTINGS <span>✳</span> HOARDINGS <span>✳</span> OUTDOOR BRANDING <span>✳</span> STREET-LEVEL IMPACT <span>✳</span></div>
+      <div className="ua-editorial-strip">
+        <span>NOT JUST AN ADVERTISEMENT. A PRESENCE.</span>
+        <span>WALL PAINTINGS <b>●</b> HOARDINGS <b>●</b> ON-GROUND VISIBILITY</span>
       </div>
 
-      <section className="ua-section ua-intro" id="services">
-        <div className="ua-section-head">
-          <span className="ua-kicker"><span /> 01 / OUR EXPERTISE</span>
-          <h2>ADS YOU DON&apos;T<br /><span>SCROLL PAST.</span></h2>
-        </div>
-        <div className="ua-intro-body">
-          <p className="ua-lead">Some advertising disappears with a swipe. Outdoor advertising becomes part of the street.</p>
-          <p>Unique Ads focuses on physical brand visibility through wall painting advertisements and hoardings. Whether your audience is travelling through a city, moving through a market or passing a key road, the medium should make the message clear and memorable.</p>
-          <a className="ua-text-link" href="#formats">See advertising formats <Arrow diagonal /></a>
+      <section className="ua-about ua-content-width" id="about">
+        <div className="ua-about-rail"><Eyebrow>01 / THE POINT OF VIEW</Eyebrow><span>OUTDOOR, BY DESIGN</span></div>
+        <div className="ua-about-copy">
+          <h2>Good advertising<br />is <em>worth noticing.</em></h2>
+          <div className="ua-about-bottom">
+            <p className="ua-about-lead">Some messages are made to disappear with the next swipe. Others become part of the route, the neighbourhood and the everyday view.</p>
+            <p>At Unique Ads, our focus is on tangible, out-of-home advertising. We help businesses explore wall painting campaigns and hoardings that put their message in front of people on the move, across urban and regional markets.</p>
+          </div>
         </div>
       </section>
 
-      <section className="ua-formats" id="formats" aria-labelledby="ua-formats-title">
-        <div className="ua-formats-top">
-          <div><span className="ua-kicker"><span /> 02 / ADVERTISING FORMATS</span><h2 id="ua-formats-title">BIG IDEAS.<br />BIGGER <span>VISIBILITY.</span></h2></div>
-          <p>Two proven physical formats. Many ways to put your message in front of people.</p>
+      <section className="ua-formats ua-content-width" id="formats" aria-labelledby="ua-formats-title">
+        <div className="ua-section-heading">
+          <Eyebrow>02 / WHAT WE DO</Eyebrow>
+          <div><h2 id="ua-formats-title">Made to be seen.<br /><em>Built for the street.</em></h2><p>Different surfaces. One goal: make the message clear and memorable.</p></div>
         </div>
-        <div className="ua-format-grid">
-          <article className="ua-format-card">
-            <div className="ua-format-image">
-              <Image src={photos.mural} alt="Outdoor wall art being painted as an example of street-level advertising" width={900} height={720} unoptimized sizes="(max-width: 760px) 100vw, 50vw" />
-              <span>01 / PAINT THE TOWN</span>
-            </div>
-            <div className="ua-format-info"><div><span className="ua-format-type">STREET-LEVEL BRANDING</span><h3>Wall Painting<br />Advertisements</h3><p>Turn visible wall surfaces into memorable brand communication at the locations that matter to your audience.</p></div><a className="ua-round-link" href="#contact" aria-label="Enquire about wall paintings"><Arrow diagonal /></a></div>
-          </article>
-          <article className="ua-format-card ua-format-card-offset">
-            <div className="ua-format-image">
-              <Image src={photos.hoarding} alt="Roadside advertising hoarding photographed in an outdoor setting" width={900} height={720} unoptimized sizes="(max-width: 760px) 100vw, 50vw" />
-              <span>02 / OWN THE VIEW</span>
-            </div>
-            <div className="ua-format-info"><div><span className="ua-format-type">LARGE-FORMAT VISIBILITY</span><h3>Outdoor<br />Hoardings</h3><p>Create bold messages for outdoor advertising placements, designed to be seen and understood on the move.</p></div><a className="ua-round-link" href="#contact" aria-label="Enquire about hoardings"><Arrow diagonal /></a></div>
-          </article>
-        </div>
-        <p className="ua-illustration-note">Photographs illustrate advertising formats. They are not presented as the Unique Ads project portfolio.</p>
+
+        <article className="ua-feature ua-feature-first">
+          <figure className="ua-feature-image">
+            <Image src="/marketing/editorial-wall-painting.jpg" alt="Illustrative roadside wall-painting advertising scene showing painters at work" fill sizes="(max-width: 850px) 100vw, 64vw" />
+            <figcaption>01 <span>ILLUSTRATIVE WALL PAINTING VISUAL</span></figcaption>
+          </figure>
+          <div className="ua-feature-copy">
+            <span className="ua-feature-no">FORMAT NO. 01 <span> / STREET-LEVEL MEDIA</span></span>
+            <h3>Wall painting<br /><em>advertisements.</em></h3>
+            <p>Turn available, highly visible walls into on-ground brand communication. A well-considered wall message can become a familiar sight along local roads, market areas and commercial routes.</p>
+            <a href="#contact" className="ua-link-arrow">Enquire about wall painting <Arrow external /></a>
+          </div>
+        </article>
+
+        <article className="ua-feature ua-feature-reverse">
+          <figure className="ua-feature-image">
+            <Image src="/marketing/editorial-hoarding.jpg" alt="Illustrative large-format roadside hoarding in navy, orange and cream during sunset" fill sizes="(max-width: 850px) 100vw, 64vw" />
+            <figcaption>02 <span>ILLUSTRATIVE HOARDING VISUAL</span></figcaption>
+          </figure>
+          <div className="ua-feature-copy">
+            <span className="ua-feature-no">FORMAT NO. 02 <span> / LARGE-FORMAT MEDIA</span></span>
+            <h3>Outdoor<br /><em>hoardings.</em></h3>
+            <p>Large-format outdoor advertising designed for visibility across busy roads and key locations. We can discuss your target areas, placement requirements and the scope of a proposed campaign.</p>
+            <a href="#contact" className="ua-link-arrow">Enquire about hoardings <Arrow external /></a>
+          </div>
+        </article>
+        <p className="ua-visual-disclaimer">The images on this page are illustrative visual concepts. They do not claim to depict Unique Ads projects, actual locations or delivered campaigns.</p>
       </section>
 
-      <section className="ua-statement" aria-label="Our brand philosophy">
-        <span className="ua-statement-small">GOOD ADVERTISING DOES MORE THAN GET NOTICED.</span>
-        <p>IT MAKES A <span>LASTING</span> IMPRESSION.</p>
-        <div className="ua-statement-star" aria-hidden="true">✳</div>
+      <section className="ua-quote-panel">
+        <div className="ua-content-width ua-quote-inner">
+          <span>THE OUTDOOR PERSPECTIVE</span>
+          <blockquote>“The best place for a message is where <em>people will actually see it.</em>”</blockquote>
+          <span className="ua-quote-symbol" aria-hidden="true">✳</span>
+        </div>
       </section>
 
-      <section className="ua-section ua-process" id="approach">
-        <div className="ua-process-head"><span className="ua-kicker"><span /> 03 / FROM BRIEF TO STREET</span><h2>BUILT FOR<br /><span>THE REAL WORLD.</span></h2><p>Every outdoor campaign starts with a clear message, the right location and a practical execution plan.</p></div>
-        <ol className="ua-process-list">
-          <li><span className="ua-process-number">01</span><div><h3>Tell us your goal</h3><p>Share your brand, target locations and preferred advertising format.</p></div><span aria-hidden="true">↗</span></li>
-          <li><span className="ua-process-number">02</span><div><h3>Define the campaign</h3><p>Discuss the wall painting or hoarding requirements and suitable coverage.</p></div><span aria-hidden="true">↗</span></li>
-          <li><span className="ua-process-number">03</span><div><h3>Take it on-ground</h3><p>Coordinate the approved campaign scope and field execution.</p></div><span aria-hidden="true">↗</span></li>
-          <li><span className="ua-process-number">04</span><div><h3>Review the outcome</h3><p>Discuss completed deliverables and next-step opportunities.</p></div><span aria-hidden="true">↗</span></li>
+      <section className="ua-approach ua-content-width" id="approach">
+        <div className="ua-approach-copy">
+          <Eyebrow>03 / THE PROCESS</Eyebrow>
+          <h2>Thoughtful planning.<br /><em>Visible execution.</em></h2>
+          <p>Outdoor campaigns work best when the audience, format, location and creative are considered together.</p>
+        </div>
+        <ol className="ua-steps">
+          {steps.map((step) => (
+            <li key={step.number}>
+              <span>{step.number}</span>
+              <div><h3>{step.title}</h3><p>{step.detail}</p></div>
+              <span aria-hidden="true">↗</span>
+            </li>
+          ))}
         </ol>
       </section>
 
-      <section className="ua-reach" id="reach">
-        <div className="ua-reach-photo">
-          <Image src={photos.street} alt="Busy Indian shopping street with storefront signage and people, illustrative of on-ground brand visibility" width={1000} height={1300} unoptimized sizes="(max-width: 850px) 100vw, 45vw" />
-          <span>WHERE PEOPLE GO, BRANDS CAN SHOW UP.</span>
-        </div>
-        <div className="ua-reach-copy">
-          <span className="ua-kicker ua-kicker-light"><span /> 04 / SERVICE COVERAGE</span>
-          <h2>THREE STATES.<br /><em>ONE</em> BIGGER<br />STAGE.</h2>
-          <p>Outdoor advertising opportunities extend beyond a single city. Unique Ads serves businesses seeking wall painting and hoarding advertising across:</p>
-          <div className="ua-region-list"><div><span>01</span><strong>Telangana</strong><Arrow diagonal /></div><div><span>02</span><strong>Andhra Pradesh</strong><Arrow diagonal /></div><div><span>03</span><strong>Karnataka</strong><Arrow diagonal /></div></div>
-          <p className="ua-reach-note">Placement availability and execution scope are confirmed when planning each campaign.</p>
-        </div>
-      </section>
-
-      <section className="ua-section ua-questions" aria-labelledby="ua-questions-title">
-        <div><span className="ua-kicker"><span /> GOOD TO KNOW</span><h2 id="ua-questions-title">QUESTIONS?<br /><span>WE&apos;VE GOT YOU.</span></h2></div>
-        <div className="ua-faqs">
-          <details><summary>What outdoor advertising does Unique Ads offer?<b>+</b></summary><p>Our core formats are wall painting advertisements and outdoor hoardings. Share your campaign goals so we can discuss a suitable approach.</p></details>
-          <details><summary>Which locations do you cover?<b>+</b></summary><p>Unique Ads works across Telangana, Andhra Pradesh and Karnataka. Specific locations depend on the campaign brief and availability.</p></details>
-          <details><summary>Can I request an estimate for my brand?<b>+</b></summary><p>Yes. Tell us your brand, preferred format, locations and approximate requirements. We can discuss the scope before preparing a quotation.</p></details>
-          <details><summary>Are the website photos completed Unique Ads projects?<b>+</b></summary><p>No. The current photographs illustrate advertising formats and street-level visibility. Verified project photographs can be added to the portfolio separately.</p></details>
+      <section className="ua-coverage" id="coverage">
+        <figure className="ua-coverage-photo">
+          <Image src="/marketing/editorial-storefront.jpg" alt="Illustration of an outdoor branding installation on a commercial storefront" fill sizes="(max-width: 850px) 100vw, 45vw" />
+          <figcaption>THE EVERYDAY WORLD IS FULL OF OPPORTUNITY.<small>Illustrative image, not project evidence.</small></figcaption>
+        </figure>
+        <div className="ua-coverage-content">
+          <Eyebrow>04 / OUR COVERAGE</Eyebrow>
+          <h2>Beyond one city.<br /><em>Across three states.</em></h2>
+          <p>Our service area extends across Telangana, Andhra Pradesh and Karnataka. Suitable locations and execution scope are discussed for every campaign.</p>
+          <div className="ua-state-list">
+            <div><span>01</span><strong>Telangana</strong></div>
+            <div><span>02</span><strong>Andhra Pradesh</strong></div>
+            <div><span>03</span><strong>Karnataka</strong></div>
+          </div>
         </div>
       </section>
 
-      <section className="ua-contact" id="contact" aria-labelledby="ua-contact-title">
-        <div className="ua-contact-left">
-          <span className="ua-kicker ua-kicker-light"><span /> 05 / LET&apos;S MAKE IT VISIBLE</span>
-          <h2 id="ua-contact-title">YOUR NEXT<br />BIG IDEA<br /><em>GOES HERE.</em></h2>
-          <p>Tell us where you want your brand to be seen. Let&apos;s discuss an outdoor advertising plan that fits.</p>
-          <a className="ua-contact-phone" href={`tel:${CONTACT_PHONE}`}>Call us: +91 96665 66532 <Arrow diagonal /></a>
-          <a className="ua-contact-whatsapp" href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">Chat on WhatsApp <Arrow diagonal /></a>
+      <section className="ua-faq ua-content-width">
+        <div><Eyebrow>A FEW MORE DETAILS</Eyebrow><h2>Before we<br /><em>get started.</em></h2></div>
+        <div className="ua-faq-list">
+          <details><summary>Which advertising formats are available? <span>+</span></summary><p>Unique Ads focuses on wall painting advertisements and outdoor hoardings. We can discuss the right format for your campaign goals.</p></details>
+          <details><summary>Where can Unique Ads run campaigns? <span>+</span></summary><p>We serve businesses across Telangana, Andhra Pradesh and Karnataka, subject to location availability and an agreed scope of work.</p></details>
+          <details><summary>How do I get a quotation? <span>+</span></summary><p>Use the enquiry form below and share your business, preferred format, location and campaign requirements. Your message opens in WhatsApp for you to send.</p></details>
+        </div>
+      </section>
+
+      <section className="ua-contact" id="contact">
+        <div className="ua-contact-intro">
+          <Eyebrow>05 / LET'S TALK</Eyebrow>
+          <h2>Let’s make<br />something<br /><em>visible.</em></h2>
+          <p>Tell us a little about your brand, the audience you want to reach and the places you want to be seen.</p>
+          <div className="ua-contact-links">
+            <a href={`tel:${phone}`}>Call +91 96665 66532 <Arrow external /></a>
+            <a href={whatsapp} target="_blank" rel="noopener noreferrer">Message on WhatsApp <Arrow external /></a>
+          </div>
         </div>
         <div className="ua-contact-form"><MarketingInquiry /></div>
       </section>
 
       <footer className="ua-footer">
-        <div className="ua-footer-main">
-          <a className="ua-logo ua-logo-footer" href="#top"><span className="ua-logomark" aria-hidden="true"><i /><i /><i /></span><span className="ua-logotext"><strong>UNIQUE<span>ADS</span></strong><small>OUTDOOR ADVERTISING</small></span></a>
-          <p>Bold outdoor branding for the places where your audience lives, works and travels.</p>
-          <a href="#top" className="ua-top-link">BACK TO TOP ↑</a>
+        <div className="ua-footer-top">
+          <a href="#top" className="ua-wordmark ua-footer-brand">
+            <Image src="/unique-ads-logo.png" width={59} height={59} alt="" className="ua-brand-image" />
+            <span><strong>UNIQUE <i>ADS</i></strong><small>OUTDOOR BRANDING</small></span>
+          </a>
+          <p>Advertising for places where<br />people live, travel and connect.</p>
+          <a href="#top">Back to top ↑</a>
         </div>
-        <div className="ua-footer-bottom"><span>© {new Date().getFullYear()} UNIQUE ADS. ALL RIGHTS RESERVED.</span><span>TELANGANA · ANDHRA PRADESH · KARNATAKA</span><a href="/admin">STAFF LOGIN</a></div>
+        <div className="ua-footer-bottom"><span>© {new Date().getFullYear()} Unique Ads</span><span>Telangana · Andhra Pradesh · Karnataka</span><a href="/admin">Staff login</a></div>
       </footer>
 
-      <div className="ua-mobile-bottom">
-        <a href={`tel:${CONTACT_PHONE}`} aria-label="Call Unique Ads">CALL NOW</a>
-        <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" aria-label="Message Unique Ads on WhatsApp">WHATSAPP ↗</a>
-      </div>
+      <nav className="ua-mobile-cta" aria-label="Contact shortcuts">
+        <a href={`tel:${phone}`}>Call us</a>
+        <a href={whatsapp} target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>
+      </nav>
     </main>
   );
 }
