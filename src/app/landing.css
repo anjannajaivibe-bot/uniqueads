@@ -286,7 +286,7 @@
    admin dashboards and print routes are not affected. */
 .ua-site{
   --ua-gutter:clamp(24px,5.1vw,80px);
-  --ua-shell-gutter:max(var(--ua-gutter),calc((100vw - 1440px)/2 + var(--ua-gutter)));
+  --ua-shell-gutter:max(var(--ua-gutter),calc(50vw - 720px + var(--ua-gutter)));
   --ua-section-space:clamp(76px,7.8vw,116px);
   --ua-section-tight:clamp(64px,6.5vw,96px);
   --ua-columns-gap:clamp(32px,5vw,72px);
