@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { MarketingInquiry } from "@/components/marketing-inquiry";
+import { StructuredData } from "@/components/structured-data";
 import "./landing.css";
 
 export const metadata: Metadata = {
@@ -71,6 +72,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 export default function Home() {
   return (
     <main id="top" className="ua-site">
+      <StructuredData />
       <div className="ua-topline">
         <span>UNIQUE ADS <span className="ua-topline-slash">/</span> OUT-OF-HOME BRANDING</span>
         <span>TELANGANA · ANDHRA PRADESH · KARNATAKA</span>
@@ -164,6 +166,35 @@ export default function Home() {
         <p className="ua-visual-disclaimer">The images on this page are illustrative visual concepts. They do not claim to depict Unique Ads projects, actual locations or delivered campaigns.</p>
       </section>
 
+      <section className="ua-guide ua-content-width" id="planning-guide" aria-labelledby="ua-guide-title">
+        <div className="ua-guide-heading">
+          <Eyebrow>FIELD NOTES / PLANNING AN OUTDOOR CAMPAIGN</Eyebrow>
+          <h2 id="ua-guide-title">Wall painting or hoardings?<br /><em>Choose the right format.</em></h2>
+          <p>The right format depends on where people will see the message, how quickly they need to understand it and which locations are actually available.</p>
+        </div>
+        <div className="ua-guide-grid">
+          <article>
+            <span className="ua-guide-number">01 / WALL ADVERTISING</span>
+            <h3>For local, repeat visibility</h3>
+            <p>Wall painting advertisements use suitable wall surfaces to communicate a brand message at street level. Start by identifying neighbourhoods, markets and routes relevant to your customers. Check the wall's condition, permission to use it and visibility before selecting a location.</p>
+          </article>
+          <article>
+            <span className="ua-guide-number">02 / LARGE-FORMAT ADVERTISING</span>
+            <h3>For bold roadside messages</h3>
+            <p>Outdoor hoardings use dedicated display structures for larger-format communication. Their suitability depends on viewing distance, surrounding traffic, the message's legibility and available placements. Keep the headline simple enough to read while passing.</p>
+          </article>
+          <article>
+            <span className="ua-guide-number">03 / THE CAMPAIGN BRIEF</span>
+            <h3>What should you share for a quote?</h3>
+            <p>Tell us your target city or route, intended audience, preferred format and campaign objective. Where available, include artwork, approximate dimensions, number of locations and your expected campaign period. These details help define a practical scope.</p>
+          </article>
+        </div>
+        <div className="ua-guide-bottom">
+          <p>Every location needs a separate suitability and availability check. Property consent and applicable local permissions must be confirmed before an outdoor campaign proceeds.</p>
+          <a className="ua-link-arrow" href="#contact">Discuss your campaign <Arrow external /></a>
+        </div>
+      </section>
+
       <section className="ua-quote-panel">
         <div className="ua-content-width ua-quote-inner">
           <span>THE OUTDOOR PERSPECTIVE</span>
@@ -211,6 +242,8 @@ export default function Home() {
         <div className="ua-faq-list">
           <details><summary>Which advertising formats are available? <span>+</span></summary><p>Unique Ads focuses on wall painting advertisements and outdoor hoardings. We can discuss the right format for your campaign goals.</p></details>
           <details><summary>Where can Unique Ads run campaigns? <span>+</span></summary><p>We serve businesses across Telangana, Andhra Pradesh and Karnataka, subject to location availability and an agreed scope of work.</p></details>
+          <details><summary>How do I choose between wall painting and hoardings? <span>+</span></summary><p>Start with your target audience, preferred road or locality and message. Wall paintings use suitable wall surfaces, while hoardings use dedicated advertising structures. The best fit depends on visibility, location availability and the agreed budget.</p></details>
+          <details><summary>Do outdoor wall advertisements require permission? <span>+</span></summary><p>Property owner consent and any applicable local approvals must be checked before work begins. Placement availability and requirements vary by site.</p></details>
           <details><summary>How do I get a quotation? <span>+</span></summary><p>Use the enquiry form below and share your business, preferred format, location and campaign requirements. Your message opens in WhatsApp for you to send.</p></details>
         </div>
       </section>
