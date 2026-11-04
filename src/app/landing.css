@@ -248,3 +248,34 @@
 .ua-about-copy h2,.ua-section-heading h2,.ua-approach-copy h2,.ua-faq h2{font-size:46px}
 }
 @media(prefers-reduced-motion:reduce){.ua-site *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+
+/* Editorial buyer guide: useful, indexable comparison content with no style leakage. */
+.ua-guide{border-top:1px solid var(--ua-line);padding-block:clamp(70px,8vw,125px)}
+.ua-guide-heading{display:grid;grid-template-columns:24% 1fr;column-gap:6%;align-items:start}
+.ua-guide-heading .ua-eyebrow{padding-top:16px}
+.ua-guide-heading h2{font-size:clamp(46px,5.2vw,76px);line-height:1.12}
+.ua-guide-heading>p{grid-column:2;font-size:15px;line-height:1.8;color:#586774;max-width:720px;margin-top:23px}
+.ua-guide-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(20px,3vw,52px);margin:50px 0 0;padding:34px 0 40px;border-top:1px solid var(--ua-line);border-bottom:1px solid var(--ua-line)}
+.ua-guide-grid article{min-width:0}
+.ua-guide-number{display:block;margin-bottom:22px;color:var(--ua-accent);font-size:10px;line-height:1.5;letter-spacing:.14em;font-weight:800}
+.ua-guide-grid h3{font-size:clamp(28px,2.45vw,38px);line-height:1.13;margin-bottom:16px}
+.ua-guide-grid p{font-size:13px;color:#65707b;line-height:1.85}
+.ua-guide-bottom{display:flex;align-items:center;justify-content:space-between;gap:30px;margin-top:27px}
+.ua-guide-bottom p{font-size:12px;line-height:1.75;color:#65707b;max-width:720px}
+@media(max-width:960px){
+.ua-guide-heading{grid-template-columns:1fr;gap:22px}
+.ua-guide-heading .ua-eyebrow{padding:0}
+.ua-guide-heading>p{grid-column:1;margin:0}
+.ua-guide-grid{gap:20px}
+}
+@media(max-width:700px){
+.ua-guide{padding-block:75px}
+.ua-guide-heading h2{font-size:clamp(44px,8.5vw,64px)}
+.ua-guide-grid{grid-template-columns:1fr;margin-top:30px;padding:15px 0 25px;gap:0}
+.ua-guide-grid article{padding:24px 0;border-bottom:1px solid var(--ua-line)}
+.ua-guide-grid article:last-child{border-bottom:0}
+.ua-guide-number{margin-bottom:12px}
+.ua-guide-grid h3{font-size:32px}
+.ua-guide-bottom{align-items:flex-start;flex-direction:column;gap:25px}
+}
