@@ -4,25 +4,50 @@ import { MarketingInquiry } from "@/components/marketing-inquiry";
 import "./landing.css";
 
 export const metadata: Metadata = {
-  title: "Unique Ads | Wall Painting & Outdoor Hoarding Advertising",
+  title: "Wall Painting Advertising & Hoardings | Unique Ads",
   description:
-    "Wall painting advertising and outdoor hoardings across Telangana, Andhra Pradesh and Karnataka. Plan your next out-of-home branding campaign with Unique Ads.",
+    "Wall painting advertising and outdoor hoardings across Telangana, Andhra Pradesh and Karnataka. Plan your next campaign and request a quote from Unique Ads.",
+  applicationName: "Unique Ads",
   keywords: [
     "wall painting advertising",
     "outdoor hoarding advertising",
-    "wall advertisements Telangana",
-    "outdoor advertising Andhra Pradesh",
-    "hoardings Karnataka",
+    "wall advertising Telangana",
+    "hoarding advertising Andhra Pradesh",
+    "outdoor advertising Karnataka",
+    "out-of-home advertising",
     "Unique Ads",
   ],
+  alternates: { canonical: "https://uniqueads.jaivibe.com/" },
   openGraph: {
-    title: "Unique Ads | Advertising made for the outside world",
-    description:
-      "Wall painting advertising and outdoor hoardings across Telangana, Andhra Pradesh and Karnataka.",
     type: "website",
+    locale: "en_IN",
+    url: "https://uniqueads.jaivibe.com/",
     siteName: "Unique Ads",
+    title: "Unique Ads | Outdoor Advertising That Gets Seen",
+    description:
+      "Wall painting advertising and outdoor hoardings across Telangana, Andhra Pradesh and Karnataka. Let's make your brand visible.",
+    images: [
+      {
+        url: "/marketing/editorial-wall-painting.jpg",
+        width: 1200,
+        height: 800,
+        type: "image/jpeg",
+        alt: "Illustrative roadside wall painting concept representing outdoor branding by Unique Ads",
+      },
+    ],
   },
-  robots: { index: true, follow: true },
+  twitter: {
+    card: "summary_large_image",
+    title: "Unique Ads | Wall Painting & Outdoor Hoardings",
+    description:
+      "Outdoor branding through wall painting advertising and hoardings across Telangana, Andhra Pradesh and Karnataka.",
+    images: ["/marketing/editorial-wall-painting.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
 };
 
 const phone = "+919666566532";
