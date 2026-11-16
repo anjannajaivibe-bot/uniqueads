@@ -25,14 +25,15 @@ export default async function LoginPage({
 
   return (
     <main
+      className="ua-login-layout"
       style={{
         minHeight: "100vh",
         display: "grid",
-        gridTemplateColumns: "minmax(0,1.05fr) minmax(360px,.95fr)",
         background: "#f6f8fb",
       }}
     >
       <section
+        className="ua-login-brand"
         style={{
           background: "#071c3b",
           color: "white",
@@ -86,6 +87,7 @@ export default async function LoginPage({
       </section>
 
       <section
+        className="ua-login-form-wrap"
         style={{
           display: "grid",
           placeItems: "center",
@@ -213,6 +215,9 @@ export default async function LoginPage({
           >
             Login activity is recorded for operational accountability.
           </p>
+          <a href="/install" style={{ color: "#0c2f6b", fontWeight: 800, fontSize: 14, textAlign: "center", textDecoration: "underline", textUnderlineOffset: 4 }}>
+            Install Unique Ads on your device
+          </a>
         </form>
       </section>
     </main>

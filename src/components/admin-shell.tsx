@@ -112,9 +112,11 @@ export function AdminTopbar({
           <nav aria-label="Mobile navigation" className="mobile-menu-links">
             {visibleNavigation.map(({label, href, icon}) => <Link key={href} href={href} onClick={closeMobileMenu} className="mobile-menu-link"><span aria-hidden="true">{icon}</span>{currentUser.role === "supervisor" && href === "/admin" ? "Home" : currentUser.role === "supervisor" && href === "/admin/work-progress" ? "My Work" : label}</Link>)}
             {currentUser.role === "supervisor" ? <Link href="/admin/work-progress/live-capture" onClick={closeMobileMenu} className="mobile-menu-link"><span aria-hidden="true">▧</span>Take Work Photo</Link> : null}
+            <Link href="/install" onClick={closeMobileMenu} className="mobile-menu-link"><span aria-hidden="true">↓</span>Install App</Link>
             <a href="/api/app-auth/logout" className="mobile-menu-link">↪ Sign out</a>
           </nav>
         </details>
+        <Link href="/install" className="topbar-install-link button button-secondary">Install App</Link>
         {currentUser.role === "super_admin" || currentUser.role === "operations_manager" ? (
           <Link href="/admin/leads/new" className="button button-primary">
             + New Lead
