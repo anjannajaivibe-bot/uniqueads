@@ -6,6 +6,10 @@ import {
 
 const PUBLIC_PATHS = [
   "/login",
+  "/install",
+  "/manifest.webmanifest",
+  "/sw.js",
+  "/pwa-icon",
   "/api/app-auth/login",
   "/api/app-auth/logout",
 ];

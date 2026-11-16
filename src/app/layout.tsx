@@ -1,8 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { PwaRegistration } from "@/components/pwa-registration";
 import "./globals.css";
 import { Providers } from "./providers";
 
+export const viewport: Viewport = { themeColor: "#081a3d" };
+
 export const metadata: Metadata = {
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "Unique Ads", statusBarStyle: "default" },
   metadataBase: new URL("https://uniqueads.jaivibe.com"),
   icons: {
     icon: { url: "/unique-ads-logo.png", type: "image/png" },
@@ -16,7 +21,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <Providers>{children}</Providers>
+        <Providers><PwaRegistration />{children}</Providers>
       </body>
     </html>
   );
