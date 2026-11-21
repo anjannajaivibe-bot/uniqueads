@@ -111,7 +111,18 @@ export async function updateOrderStatus(formData: FormData) {
     throw new Error("Invalid order status.");
   }
 
-  await sql`
+  if (["completed", "invoiced", "closed"].includes(status)) {
+    const counts = await sql`
+      SELECT count(*) FILTER (WHERE status <> 'cancelled')::int AS total,
+        count(*) FILTER (WHERE status = 'completed' AND verified_at IS NOT NULL)::int AS verified
+      FROM order_locations WHERE order_id = ${orderId}::uuid
+    `;
+    if (!Number(counts[0]?.total) || Number(counts[0]?.verified) !== Number(counts[0]?.total)) {
+      throw new Error("All active sites must have approved GPS completion evidence before closing this work order.");
+    }
+  }
+
+  const updated = await sql`
     UPDATE orders
     SET
       status = ${status},
@@ -124,7 +135,9 @@ export async function updateOrderStatus(formData: FormData) {
       END,
       updated_at = now()
     WHERE id = ${orderId}::uuid
+    RETURNING id
   `;
+  if (!updated.length) throw new Error("Work order not found.");
 
   await logOrderActivity(
     currentUser.id,
