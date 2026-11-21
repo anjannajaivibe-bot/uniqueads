@@ -101,6 +101,8 @@ export async function addWorkUpdate(formData: FormData) {
     FROM order_locations ol
     JOIN orders o ON o.id = ol.order_id
     WHERE ol.id = ${locationId}::uuid
+      AND ol.status NOT IN ('completed','cancelled')
+      AND o.status <> 'cancelled'
     LIMIT 1
   `;
 
