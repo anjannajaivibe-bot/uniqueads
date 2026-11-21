@@ -5,6 +5,11 @@ export async function getOrderList() {
     SELECT
       o.id,
       o.order_no,
+      o.entity_code,
+      o.client_work_order_no,
+      o.client_invoice_no,
+      o.contract_area_sqft,
+      o.client_rate_per_sqft,
       o.campaign_name,
       o.advertising_type,
       o.start_date,

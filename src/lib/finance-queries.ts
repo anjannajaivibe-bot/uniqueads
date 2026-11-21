@@ -3,6 +3,12 @@ import { sql } from "@/lib/db";
 export async function getFinanceSummary() {
   const rows = await sql`
     SELECT
+      COALESCE((SELECT sum(p.amount) FROM customer_payments p
+        JOIN orders o ON o.id=p.order_id WHERE o.status <> 'cancelled'),0) AS company_collected,
+      COALESCE((SELECT sum(o.total_order_amount - COALESCE((SELECT sum(p.amount) FROM customer_payments p WHERE p.order_id=o.id),0))
+        FROM orders o WHERE o.status <> 'cancelled'),0) AS company_outstanding,
+      COALESCE((SELECT sum(total_order_amount) FROM orders WHERE entity_code='unique_ads' AND status <> 'cancelled'),0) AS unique_ads_order_value,
+      COALESCE((SELECT sum(total_order_amount) FROM orders WHERE entity_code='unique_advertisers' AND status <> 'cancelled'),0) AS unique_advertisers_order_value,
       COALESCE((
         SELECT sum(total_amount)
         FROM invoices
@@ -67,6 +73,11 @@ export async function getInvoiceList() {
       i.total_amount,
       i.amount_paid,
       o.order_no,
+      o.entity_code,
+      o.client_work_order_no,
+      o.client_invoice_no,
+      o.contract_area_sqft,
+      o.client_rate_per_sqft,
       o.campaign_name,
       c.company_name,
       c.phone
@@ -190,6 +201,10 @@ export async function getInvoiceOrderSource(orderId: string) {
     SELECT
       o.id,
       o.order_no,
+      o.entity_code,
+      o.client_work_order_no,
+      o.contract_area_sqft,
+      o.client_rate_per_sqft,
       o.campaign_name,
       o.customer_id,
       o.quotation_id,
@@ -245,7 +260,9 @@ export async function getInvoiceById(id: string) {
     SELECT
       i.*,
       o.order_no,
-      o.campaign_name,
+      o.entity_code,
+      o.client_work_order_no,
+      o.client_invoice_no,
       o.status AS order_status,
       c.company_name,
       c.contact_person,

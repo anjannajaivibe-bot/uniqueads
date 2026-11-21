@@ -6,6 +6,6 @@ export default async function ModuleLayout({
 }: {
   children: ReactNode;
 }) {
-  await requireRoles(ACCESS.field);
+  await requireRoles(ACCESS.operations);
   return children;
 }

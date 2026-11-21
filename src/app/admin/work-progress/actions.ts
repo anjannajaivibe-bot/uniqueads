@@ -50,7 +50,7 @@ export async function addWorkUpdate(formData: FormData) {
   const updateText = clean(formData.get("update_text"));
   const latitude = numberOrNull(formData.get("latitude"));
   const longitude = numberOrNull(formData.get("longitude"));
-  const clientApproved = clean(formData.get("client_approved")) === "true";
+  const clientApproved = currentUser.role !== "supervisor" && clean(formData.get("client_approved")) === "true";
 
   const allowed = [
     "started",
@@ -93,6 +93,7 @@ export async function addWorkUpdate(formData: FormData) {
             FROM order_worker_assignments owa
             WHERE owa.order_id = o.id
               AND owa.worker_id = ${currentUser.worker_id}::uuid
+              AND (owa.order_location_id = ol.id OR owa.order_location_id IS NULL)
               AND owa.released_on IS NULL
           )
         )
@@ -100,6 +101,8 @@ export async function addWorkUpdate(formData: FormData) {
     FROM order_locations ol
     JOIN orders o ON o.id = ol.order_id
     WHERE ol.id = ${locationId}::uuid
+      AND ol.status NOT IN ('completed','cancelled')
+      AND o.status <> 'cancelled'
     LIMIT 1
   `;
 

@@ -15,6 +15,7 @@ export async function getWorkProgressOverview(user: CurrentAppUser) {
       ol.landmark,
       ol.wall_size,
       ol.area_sqft,
+      ol.completed_area_sqft,
       ol.quantity,
       ol.planned_date,
       ol.completed_date,
@@ -65,6 +66,7 @@ export async function getWorkProgressOverview(user: CurrentAppUser) {
             FROM order_worker_assignments owa_scope
             WHERE owa_scope.order_id = o.id
               AND owa_scope.worker_id = ${user.worker_id}::uuid
+              AND (owa_scope.order_location_id = ol.id OR owa_scope.order_location_id IS NULL)
               AND owa_scope.released_on IS NULL
           )
         )
@@ -110,6 +112,7 @@ export async function getWorkProgressCounts(user: CurrentAppUser) {
             FROM order_worker_assignments owa_scope
             WHERE owa_scope.order_id = o.id
               AND owa_scope.worker_id = ${user.worker_id}::uuid
+              AND (owa_scope.order_location_id = ol.id OR owa_scope.order_location_id IS NULL)
               AND owa_scope.released_on IS NULL
           )
         )
@@ -147,6 +150,7 @@ export async function getWorkLocation(id: string, user: CurrentAppUser) {
             FROM order_worker_assignments owa_scope
             WHERE owa_scope.order_id = o.id
               AND owa_scope.worker_id = ${user.worker_id}::uuid
+              AND (owa_scope.order_location_id = ol.id OR owa_scope.order_location_id IS NULL)
               AND owa_scope.released_on IS NULL
           )
         )
@@ -183,6 +187,10 @@ export async function getWorkPhotos(locationId: string) {
       wp.file_url,
       wp.thumbnail_url,
       wp.caption,
+      wp.completed_area_sqft,
+      wp.gps_accuracy_m,
+      wp.server_received_at,
+      wp.is_live_capture,
       wp.latitude,
       wp.longitude,
       wp.captured_at,

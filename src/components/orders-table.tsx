@@ -7,6 +7,9 @@ import { TablePagination } from "@/components/table-pagination";
 type Row = {
   id: string;
   order_no: string;
+  entity_code: string;
+  client_work_order_no: string | null;
+  contract_area_sqft: string | number | null;
   campaign_name: string;
   advertising_type: string | null;
   start_date: string | Date | null;
@@ -57,6 +60,7 @@ const PAGE_SIZE = 50;
 export function OrdersTable({ rows }: { rows: Row[] }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
+  const [entity, setEntity] = useState("all");
   const [due, setDue] = useState("all");
 
   const [page, setPage] = useState(1);
@@ -67,6 +71,8 @@ export function OrdersTable({ rows }: { rows: Row[] }) {
     return rows.filter((row) => {
       const haystack = [
         row.order_no,
+        row.client_work_order_no,
+        row.entity_code,
         row.campaign_name,
         row.company_name,
         row.contact_person,
@@ -83,6 +89,7 @@ export function OrdersTable({ rows }: { rows: Row[] }) {
       return (
         (!q || haystack.includes(q)) &&
         (status === "all" || row.status === status) &&
+        (entity === "all" || row.entity_code === entity) &&
         (
           due === "all" ||
           (due === "overdue" && isOverdue) ||
@@ -90,11 +97,11 @@ export function OrdersTable({ rows }: { rows: Row[] }) {
         )
       );
     });
-  }, [rows, query, status, due]);
+  }, [rows, query, status, entity, due]);
 
   useEffect(() => {
     setPage(1);
-  }, [query, status, due]);
+  }, [query, status, entity, due]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -112,7 +119,7 @@ export function OrdersTable({ rows }: { rows: Row[] }) {
             id="order-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Order no, campaign, customer, phone, supervisor..."
+            placeholder="Company work order, client, campaign, reference..."
           />
         </div>
 
@@ -136,6 +143,14 @@ export function OrdersTable({ rows }: { rows: Row[] }) {
         </label>
 
         <label>
+          <span>Receiving Entity</span>
+          <select value={entity} onChange={(e) => setEntity(e.target.value)}>
+            <option value="all">Both Entities</option>
+            <option value="unique_ads">Unique Ads</option>
+            <option value="unique_advertisers">Unique Advertisers</option>
+          </select>
+        </label>
+        <label>
           <span>Due</span>
           <select value={due} onChange={(e) => setDue(e.target.value)}>
             <option value="all">All</option>
@@ -153,11 +168,12 @@ export function OrdersTable({ rows }: { rows: Row[] }) {
         <table>
           <thead>
             <tr>
-              <th>Order</th>
+              <th>Company WO / ERP</th>
+              <th>Entity</th>
               <th>Customer / Campaign</th>
               <th>Due</th>
               <th>Progress</th>
-              <th>Supervisor</th>
+              <th>Assigned Team</th>
               <th>Status</th>
               <th className="align-right">Value</th>
               <th />
@@ -166,7 +182,7 @@ export function OrdersTable({ rows }: { rows: Row[] }) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="empty-cell">
+                <td colSpan={9} className="empty-cell">
                   No orders match the current filters.
                 </td>
               </tr>
@@ -178,12 +194,15 @@ export function OrdersTable({ rows }: { rows: Row[] }) {
                   <tr key={row.id}>
                     <td>
                       <Link href={`/admin/orders/${row.id}`} className="mono">
-                        {row.order_no}
+                        {row.client_work_order_no || row.order_no}
                       </Link>
+                      {row.client_work_order_no ? <div className="table-subtext">{row.order_no}</div> : null}
                     </td>
+                    <td>{row.entity_code === "unique_advertisers" ? "Unique Advertisers" : "Unique Ads"}</td>
                     <td>
                       <strong>{row.company_name}</strong>
                       <div className="table-subtext">{row.campaign_name}</div>
+                      {row.contract_area_sqft ? <div className="table-subtext">{Number(row.contract_area_sqft).toLocaleString("en-IN")} sq.ft</div> : null}
                     </td>
                     <td>
                       <span className={isOverdue ? "followup-overdue" : ""}>

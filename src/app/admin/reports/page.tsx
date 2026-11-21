@@ -112,6 +112,12 @@ export default async function ReportsPage({
         description="Management view of sales, revenue, collections, execution costs and profitability."
       />
 
+      <section className="panel" style={{marginBottom:24}}>
+        <h2>GPS Completion Evidence</h2>
+        <p>Build an order-wise, printable record of live site photos, coordinates, actual square feet and verification times.</p>
+        <Link href="/admin/reports/work-photos" className="button button-primary">Generate GPS Photo Report</Link>
+      </section>
+
       <section className="panel report-filter-panel">
         <form method="get" className="report-filter-form">
           <label>

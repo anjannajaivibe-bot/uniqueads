@@ -24,7 +24,7 @@ function nonNegativeInteger(value: FormDataEntryValue | null) {
   const text = clean(value);
   if (!text) return null;
   const parsed = Number.parseInt(text, 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  return Number.isSafeInteger(parsed) && parsed >= 0 && /^\d+$/.test(text) ? parsed : null;
 }
 
 async function logOrderActivity(
@@ -111,7 +111,18 @@ export async function updateOrderStatus(formData: FormData) {
     throw new Error("Invalid order status.");
   }
 
-  await sql`
+  if (["completed", "invoiced", "closed"].includes(status)) {
+    const counts = await sql`
+      SELECT count(*) FILTER (WHERE status <> 'cancelled')::int AS total,
+        count(*) FILTER (WHERE status = 'completed' AND verified_at IS NOT NULL)::int AS verified
+      FROM order_locations WHERE order_id = ${orderId}::uuid
+    `;
+    if (!Number(counts[0]?.total) || Number(counts[0]?.verified) !== Number(counts[0]?.total)) {
+      throw new Error("All active sites must have approved GPS completion evidence before closing this work order.");
+    }
+  }
+
+  const updated = await sql`
     UPDATE orders
     SET
       status = ${status},
@@ -124,7 +135,9 @@ export async function updateOrderStatus(formData: FormData) {
       END,
       updated_at = now()
     WHERE id = ${orderId}::uuid
+    RETURNING id
   `;
+  if (!updated.length) throw new Error("Work order not found.");
 
   await logOrderActivity(
     currentUser.id,
@@ -146,7 +159,23 @@ export async function addOrderLocation(formData: FormData) {
   const locationName = clean(formData.get("location_name"));
 
   if (!orderId || !locationName) {
-    throw new Error("Order and location name are required.");
+    throw new Error("Work order and location name are required.");
+  }
+  const siteSqft = nonNegativeNumber(formData.get("area_sqft"));
+  if (siteSqft === null || siteSqft <= 0) {
+    throw new Error("Enter the total allocated area for this site in sq.ft.");
+  }
+  const allocated = await sql`
+    SELECT o.contract_area_sqft,
+      COALESCE((SELECT sum(ol.area_sqft) FROM order_locations ol
+        WHERE ol.order_id=o.id AND ol.status <> 'cancelled'),0) AS existing_area
+    FROM orders o WHERE o.id=${orderId}::uuid AND o.status <> 'cancelled'
+    LIMIT 1
+  `;
+  if (!allocated.length) throw new Error("Work order not found or cancelled.");
+  const contractSqft = allocated[0].contract_area_sqft === null ? null : Number(allocated[0].contract_area_sqft);
+  if (contractSqft !== null && Number(allocated[0].existing_area) + siteSqft > contractSqft + 0.001) {
+    throw new Error("New site square feet exceed the remaining contracted work area.");
   }
 
   const rows = await sql`
@@ -178,7 +207,7 @@ export async function addOrderLocation(formData: FormData) {
       ${nonNegativeNumber(formData.get("latitude"))},
       ${nonNegativeNumber(formData.get("longitude"))},
       ${clean(formData.get("wall_size"))},
-      ${nonNegativeNumber(formData.get("area_sqft"))},
+      ${siteSqft},
       ${nonNegativeInteger(formData.get("quantity")) ?? 1},
       ${clean(formData.get("planned_date"))},
       'pending',
@@ -225,6 +254,19 @@ export async function updateOrderLocation(formData: FormData) {
     throw new Error("Invalid location update.");
   }
 
+  if (status === "completed") {
+    const evidence = await sql`
+      SELECT id FROM work_photos
+      WHERE order_id = ${orderId}::uuid
+        AND order_location_id = ${locationId}::uuid
+        AND photo_type = 'completed' AND is_live_capture = true
+      LIMIT 1
+    `;
+    if (evidence.length === 0) {
+      throw new Error("Verified completion requires a live GPS completion photo. Ask the subcontractor to submit proof.");
+    }
+  }
+
   const safeProgress =
     status === "completed"
       ? 100
@@ -240,6 +282,8 @@ export async function updateOrderLocation(formData: FormData) {
         ELSE NULL
       END,
       client_approved = ${clean(formData.get("client_approved")) === "true"},
+      verified_at = CASE WHEN ${status} = 'completed' THEN now() ELSE NULL END,
+      verified_by = CASE WHEN ${status} = 'completed' THEN ${currentUser.id}::uuid ELSE NULL END,
       notes = ${clean(formData.get("notes"))},
       updated_at = now()
     WHERE id = ${locationId}::uuid
@@ -247,9 +291,8 @@ export async function updateOrderLocation(formData: FormData) {
     RETURNING location_name
   `;
 
-  const locationName = rows[0]?.location_name
-    ? String(rows[0].location_name)
-    : "Location";
+  if (!rows.length) throw new Error("Work location not found on this work order.");
+  const locationName = String(rows[0].location_name);
 
   await logOrderActivity(
     currentUser.id,
@@ -279,11 +322,37 @@ export async function assignWorkerToOrder(formData: FormData) {
     throw new Error("Order and worker are required.");
   }
 
-  const paymentMode = clean(formData.get("agreed_payment_mode"));
-  const allowedModes = ["daily", "per_wall", "per_sqft", "fixed", "milestone"];
+  // New subcontract allocations are strictly measured and priced in square feet.
+  const paymentMode = "per_sqft";
+  const rate = nonNegativeNumber(formData.get("agreed_rate"));
+  if (rate === null) throw new Error("Enter the agreed subcontract rate per sq.ft.");
 
-  if (paymentMode && !allowedModes.includes(paymentMode)) {
-    throw new Error("Invalid worker payment mode.");
+  if (locationId) {
+    const validSite = await sql`
+      SELECT id FROM order_locations WHERE id = ${locationId}::uuid
+        AND order_id = ${orderId}::uuid AND status <> 'cancelled' LIMIT 1
+    `;
+    if (!validSite.length) throw new Error("Selected site does not belong to this work order.");
+  }
+
+  const areaRows = await sql`
+    SELECT CASE WHEN ${locationId}::text IS NOT NULL
+      THEN (SELECT ol.area_sqft FROM order_locations ol
+        WHERE ol.id = ${locationId}::uuid AND ol.order_id = o.id)
+      ELSE COALESCE(o.contract_area_sqft,
+        (SELECT sum(ol.area_sqft) FROM order_locations ol
+          WHERE ol.order_id=o.id AND ol.status <> 'cancelled'))
+      END AS allocated_sqft
+    FROM orders o WHERE o.id = ${orderId}::uuid AND o.status <> 'cancelled'
+    LIMIT 1
+  `;
+  const allocatedSqft = Number(areaRows[0]?.allocated_sqft ?? 0);
+  if (!Number.isFinite(allocatedSqft) || allocatedSqft <= 0) {
+    throw new Error("Record the allocated area in sq.ft before assigning this subcontractor.");
+  }
+  const agreedAmount = Math.round(allocatedSqft * rate * 100) / 100;
+  if (!Number.isFinite(agreedAmount) || agreedAmount > 999999999999) {
+    throw new Error("Subcontract amount exceeds the supported range.");
   }
 
   const existing = await sql`
@@ -332,8 +401,8 @@ export async function assignWorkerToOrder(formData: FormData) {
       ${workerId}::uuid,
       ${clean(formData.get("role_on_job"))},
       ${paymentMode},
-      ${nonNegativeNumber(formData.get("agreed_rate"))},
-      ${nonNegativeNumber(formData.get("agreed_amount"))},
+      ${rate},
+      ${agreedAmount},
       CURRENT_DATE,
       ${clean(formData.get("notes"))},
       ${currentUser.id}
@@ -358,7 +427,7 @@ export async function assignWorkerToOrder(formData: FormData) {
     orderId,
     "worker_assigned",
     `${workerName} assigned to the order${locationId ? " location" : ""}.`,
-    { worker_id: workerId, order_location_id: locationId }
+    { worker_id: workerId, order_location_id: locationId, allocated_sqft: allocatedSqft, rate_per_sqft: rate, agreed_amount: agreedAmount }
   );
 
   revalidatePath("/admin/orders");
@@ -367,56 +436,68 @@ export async function assignWorkerToOrder(formData: FormData) {
 }
 
 
-/** Record a confirmed work order directly against a customer; quotations are optional. */
+/** Incoming company work order. All pricing is based on agreed square feet. */
 export async function createWorkOrder(formData: FormData) {
   const actor = await requireRoles(ACCESS.operations);
   const customerId = clean(formData.get("customer_id"));
   const campaignName = clean(formData.get("campaign_name"));
-  const advertisingType = clean(formData.get("advertising_type"));
-  const amountText = clean(formData.get("total_order_amount"));
-  const advanceText = clean(formData.get("advance_received"));
-  const amount = Number(amountText ?? "0");
-  const advance = Number(advanceText ?? "0");
-
-  if (!customerId || !/^[0-9a-f-]{36}$/i.test(customerId)) {
-    throw new Error("Please select a customer.");
-  }
-  if (!campaignName) throw new Error("Work order description is required.");
-  if (!Number.isFinite(amount) || amount < 0 || !Number.isFinite(advance) || advance < 0) {
-    throw new Error("Order value and advance must be valid nonnegative amounts.");
-  }
-  if (advance > amount) throw new Error("Advance cannot exceed the work order value.");
+  const companyWorkOrderNo = clean(formData.get("client_work_order_no"));
+  const companyInvoiceNo = clean(formData.get("client_invoice_no"));
+  const entityCode = clean(formData.get("entity_code"));
+  const area = Number(clean(formData.get("contract_area_sqft")));
+  const rate = Number(clean(formData.get("client_rate_per_sqft")));
   const startDate = clean(formData.get("start_date"));
   const dueDate = clean(formData.get("due_date"));
+
+  if (!customerId || !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(customerId)) {
+    throw new Error("Select a valid company.");
+  }
+  if (!campaignName || (!companyWorkOrderNo && !companyInvoiceNo)) {
+    throw new Error("Work description and either company work order number or invoice reference are required.");
+  }
+  if (entityCode !== "unique_ads" && entityCode !== "unique_advertisers") {
+    throw new Error("Select the receiving business entity.");
+  }
+  if (!Number.isFinite(area) || area <= 0 || !Number.isFinite(rate) || rate < 0) {
+    throw new Error("Area in sq.ft must be positive and agreed rate must be nonnegative.");
+  }
+  if (area > 999999999 || rate > 999999999) throw new Error("Area or rate is too large.");
+  const amount = Math.round(area * rate * 100) / 100;
+  if (!Number.isFinite(amount) || amount > 999999999999) throw new Error("Invalid total value.");
   if (startDate && dueDate && dueDate < startDate) {
     throw new Error("Due date cannot be earlier than start date.");
   }
 
   const orderNo = `UA-ORD-${new Date().getFullYear()}-${randomUUID().slice(0, 8).toUpperCase()}`;
   const rows = await sql`
-    INSERT INTO orders (
-      order_no, customer_id, campaign_name, advertising_type, start_date,
-      due_date, status, total_order_amount, advance_received,
-      work_instructions, created_by
+    WITH created_order AS (
+      INSERT INTO orders (
+        order_no, customer_id, campaign_name, advertising_type, start_date,
+        due_date, status, total_order_amount, advance_received,
+        work_instructions, created_by, entity_code,
+        client_work_order_no, client_invoice_no, contract_area_sqft, client_rate_per_sqft
+      )
+      SELECT ${orderNo}, c.id, ${campaignName}, ${clean(formData.get("advertising_type"))},
+        ${startDate}, ${dueDate}, 'order_received', ${amount}, 0,
+        ${clean(formData.get("work_instructions"))}, ${actor.id}::uuid,
+        ${entityCode}, ${companyWorkOrderNo}, ${companyInvoiceNo}, ${area}, ${rate}
+      FROM customers c
+      WHERE c.id = ${customerId}::uuid AND c.is_active = true
+      RETURNING id
+    ),
+    logged AS (
+      INSERT INTO activity_logs(actor_user_id,action,entity_type,entity_id,description,metadata)
+      SELECT ${actor.id}::uuid, 'order_created','order',co.id,
+        ${'Company work received: ' + (companyWorkOrderNo || companyInvoiceNo)},
+        jsonb_build_object('entity',${entityCode},'sqft',${area},'rate',${rate},'value',${amount})
+      FROM created_order co RETURNING id
     )
-    SELECT
-      ${orderNo}, c.id, ${campaignName}, ${advertisingType}, ${startDate},
-      ${dueDate}, 'order_received', ${Math.round(amount * 100) / 100},
-      ${Math.round(advance * 100) / 100}, ${clean(formData.get("work_instructions"))},
-      ${actor.id}::uuid
-    FROM customers c
-    WHERE c.id = ${customerId}::uuid AND c.is_active = true
-    RETURNING id
+    SELECT co.id FROM created_order co WHERE EXISTS (SELECT 1 FROM logged)
   `;
-  if (!rows.length) throw new Error("Customer does not exist or is inactive.");
 
-  const orderId = String(rows[0].id);
-  await logOrderActivity(actor.id, orderId, "order_created", `Work order ${orderNo} created directly.`, {
-    total_order_amount: amount,
-    advance_received: advance,
-  });
+  if (!rows.length) throw new Error("Company not found or inactive.");
   revalidatePath("/admin");
   revalidatePath("/admin/orders");
   revalidatePath("/admin/finance");
-  redirect(`/admin/orders/${orderId}`);
+  redirect(`/admin/orders/${rows[0].id}`);
 }

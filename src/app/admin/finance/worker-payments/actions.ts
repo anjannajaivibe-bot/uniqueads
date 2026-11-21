@@ -1,112 +1,44 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { ACCESS, requireRoles } from "@/lib/auth/permissions";
 
-function clean(value: FormDataEntryValue | null) {
-  const text = String(value ?? "").trim();
-  return text || null;
+function value(form: FormData, key: string) {
+  return String(form.get(key) ?? "").trim();
 }
+const uuid = /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i;
 
-function nonNegativeNumber(value: FormDataEntryValue | null) {
-  const text = clean(value);
-  if (!text) return null;
-  const parsed = Number(text);
-  return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) / 100 : null;
-}
-
-function paymentNumber() {
-  return `UA-WPAY-${new Date().getFullYear()}-${randomUUID().slice(0, 6).toUpperCase()}`;
-}
-
-async function logWorkerActivity(actorUserId: string, workerId: string, action: string, description: string, metadata: Record<string, unknown> = {}) {
-  await sql`INSERT INTO activity_logs(actor_user_id, action, entity_type, entity_id, description, metadata)
-    VALUES (${actorUserId},${action},'worker',${workerId}::uuid,${description},${JSON.stringify(metadata)})`;
-}
-
-export async function addWorkerPayment(formData: FormData) {
-  const currentUser = await requireRoles(ACCESS.finance);
-
-  const workerId = clean(formData.get("worker_id"));
-  const amount = nonNegativeNumber(formData.get("amount"));
-  const paymentType = clean(formData.get("payment_type")) ?? "progress";
-  const paymentMethod = clean(formData.get("payment_method"));
-
-  const allowedTypes = ["advance", "progress", "final", "adjustment"];
-  const allowedMethods = ["cash", "bank_transfer", "upi", "cheque", "other"];
-
-  if (!workerId || !amount || amount <= 0) {
-    throw new Error("Worker and a payment amount greater than zero are required.");
+export async function addWorkerPayment(form: FormData) {
+  const actor = await requireRoles(ACCESS.finance);
+  const workerId = value(form, "worker_id");
+  const orderId = value(form, "order_id");
+  const amountRaw = value(form, "amount");
+  const amount = Number(amountRaw);
+  const paymentType = value(form, "payment_type") || "progress";
+  const paymentMethod = value(form, "payment_method") || null;
+  const date = value(form, "payment_date") || null;
+  if (!uuid.test(workerId) || !uuid.test(orderId)) {
+    throw new Error("Select an assigned subcontractor and the related work order.");
   }
-  if (!allowedTypes.includes(paymentType)) throw new Error("Invalid payment type.");
-  if (paymentMethod && !allowedMethods.includes(paymentMethod)) {
-    throw new Error("Invalid payment method.");
+  if (!/^\d+(?:\.\d{1,2})?$/.test(amountRaw) || !Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Enter a positive payment amount with at most two decimals.");
   }
-
-  const orderId = clean(formData.get("order_id"));
-  let locationId = clean(formData.get("order_location_id"));
-
-  if (locationId && orderId) {
-    const validLocation = await sql`
-      SELECT id
-      FROM order_locations
-      WHERE id = ${locationId}::uuid
-        AND order_id = ${orderId}::uuid
-      LIMIT 1
-    `;
-    if (validLocation.length === 0) locationId = null;
-  } else {
-    locationId = null;
-  }
-
-  const paymentNo = paymentNumber();
-
-  await sql`
-    INSERT INTO worker_payments (
-      payment_no,
-      worker_id,
-      order_id,
-      order_location_id,
-      payment_date,
-      payment_type,
-      amount,
-      payment_method,
-      reference_no,
-      notes,
-      paid_by
-    ) VALUES (
-      ${paymentNo},
-      ${workerId}::uuid,
-      ${orderId},
-      ${locationId},
-      ${clean(formData.get("payment_date")) ?? new Date().toISOString().slice(0, 10)},
-      ${paymentType},
-      ${amount},
-      ${paymentMethod},
-      ${clean(formData.get("reference_no"))},
-      ${clean(formData.get("notes"))},
-      ${currentUser.id}
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Invalid payment date.");
+  const results = await sql`
+    SELECT * FROM public.record_verified_subcontract_payment(
+      ${workerId}::uuid,${orderId}::uuid,${actor.id}::uuid,
+      ${amount}::numeric,${paymentType},${paymentMethod},
+      ${value(form, "reference_no") || null},${date}::date,
+      ${value(form, "notes") || null}
     )
   `;
-
-  await logWorkerActivity(
-    currentUser.id,
-    workerId,
-    "worker_payment_added",
-    `Worker payment ${paymentNo} recorded.`,
-    {
-      payment_no: paymentNo,
-      amount,
-      order_id: orderId,
-      payment_type: paymentType,
-    }
-  );
-
-  revalidatePath("/admin/workers");
-  revalidatePath(`/admin/workers/${workerId}`);
+  if (!results.length) throw new Error("Subcontractor payment could not be recorded.");
+  revalidatePath("/admin");
   revalidatePath("/admin/finance");
   revalidatePath("/admin/finance/worker-payments");
+  revalidatePath("/admin/workers");
+  revalidatePath(`/admin/workers/${workerId}`);
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/admin/reports");
 }
-

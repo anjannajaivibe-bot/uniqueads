@@ -17,6 +17,8 @@ type WorkLocation = {
   district: string | null;
   state: string | null;
   progress_percent: number;
+  area_sqft: number | string | null;
+  completed_area_sqft: number | string | null;
   status: string;
 };
 
@@ -43,6 +45,7 @@ export function LiveCaptureClient({
   const [progress, setProgress] = useState(
     locations[0]?.progress_percent || 0
   );
+  const [completedSqft, setCompletedSqft] = useState(Number(locations[0]?.completed_area_sqft || 0));
   const [note, setNote] = useState("");
   const [position, setPosition] = useState<PositionData | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
@@ -52,7 +55,6 @@ export function LiveCaptureClient({
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const submittingRef = useRef(false);
-  const [markCompleted, setMarkCompleted] = useState(false);
 
   const selectedLocation = useMemo(
     () => locations.find((item) => item.id === selectedLocationId),
@@ -161,6 +163,14 @@ export function LiveCaptureClient({
       return;
     }
 
+    let freshPosition: PositionData;
+    try {
+      freshPosition = await requestLocation();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Fresh GPS unavailable. Retake the photo.");
+      return;
+    }
+
     const maxWidth = 1600;
     const scale = Math.min(1, maxWidth / sourceWidth);
     const width = Math.round(sourceWidth * scale);
@@ -182,7 +192,9 @@ export function LiveCaptureClient({
     const lines = [
       "Unique Ads - LIVE WORK PHOTO",
       `${selectedLocation.order_no} | ${selectedLocation.location_name}`,
-      `${position.latitude.toFixed(6)}, ${position.longitude.toFixed(6)} | ±${Math.round(position.accuracy)} m`,
+      [selectedLocation.city, selectedLocation.district, selectedLocation.state].filter(Boolean).join(", ") || "Address not recorded",
+      `Work: ${photoType === "completed" ? Number(selectedLocation.area_sqft || 0).toFixed(2) : completedSqft.toFixed(2)} / ${Number(selectedLocation.area_sqft || 0).toFixed(2)} sq.ft`,
+      `GPS: ${freshPosition.latitude.toFixed(6)}, ${freshPosition.longitude.toFixed(6)} | Accuracy ±${Math.round(freshPosition.accuracy)} m`,
       `${captured.toLocaleString("en-IN")} | By: ${username}`,
     ];
 
@@ -201,7 +213,8 @@ export function LiveCaptureClient({
       context.fillText(
         line,
         padding,
-        height - boxHeight + padding + index * lineHeight
+        height - boxHeight + padding + index * lineHeight,
+        width - padding * 2
       );
     });
 
@@ -268,10 +281,11 @@ export function LiveCaptureClient({
         "progress_percent",
         String(photoType === "completed" ? 100 : progress)
       );
+      form.append("completed_area_sqft", String(photoType === "completed" ? Number(selectedLocation.area_sqft || 0) : completedSqft));
       form.append("note", note);
       form.append(
         "mark_completed",
-        String(photoType === "completed" && markCompleted)
+        String(photoType === "completed")
       );
 
       const controller = new AbortController();
@@ -294,8 +308,8 @@ export function LiveCaptureClient({
       }
 
       setStatus(
-        photoType === "completed" && markCompleted
-          ? "Live completion photo saved and location marked completed."
+        photoType === "completed"
+          ? "Completion proof saved. Unique Ads will review and verify this work."
           : "Live work-progress photo saved successfully."
       );
 
@@ -357,6 +371,7 @@ export function LiveCaptureClient({
               setSelectedLocationId(nextId);
               const next = locations.find((item) => item.id === nextId);
               setProgress(next?.progress_percent || 0);
+              setCompletedSqft(Number(next?.completed_area_sqft || 0));
               setCapturedBlob(null);
               setCapturedAt(null);
               setPosition(null);
@@ -413,8 +428,10 @@ export function LiveCaptureClient({
               onChange={(event) => {
                 const value = event.target.value;
                 setPhotoType(value);
-                if (value === "completed") setProgress(100);
-                if (value !== "completed") setMarkCompleted(false);
+                if (value === "completed") {
+                  setProgress(100);
+                  setCompletedSqft(Number(selectedLocation?.area_sqft || 0));
+                }
               }}
               style={{ width: "100%", minHeight: 42 }}
             >
@@ -424,22 +441,32 @@ export function LiveCaptureClient({
             </select>
           </label>
 
-          <label>
-            <div style={{ fontWeight: 800, marginBottom: 6 }}>
-              Work Done (%)
-            </div>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={photoType === "completed" ? 100 : progress}
-              disabled={photoType === "completed"}
-              onChange={(event) =>
-                setProgress(Number(event.target.value))
-              }
-              style={{ width: "100%", minHeight: 38 }}
-            />
-          </label>
+          {Number(selectedLocation?.area_sqft || 0) > 0 ? (
+            <label>
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>Work Completed (sq.ft)</div>
+              <input type="number" min={0} max={Number(selectedLocation?.area_sqft || 0)}
+                step="0.01" value={photoType === "completed" ? Number(selectedLocation?.area_sqft || 0) : completedSqft}
+                disabled={photoType === "completed"}
+                onChange={(event) => {
+                  const nextSqft = Number(event.target.value);
+                  const total = Number(selectedLocation?.area_sqft || 0);
+                  setCompletedSqft(nextSqft);
+                  setProgress(total > 0 ? Math.round((nextSqft / total) * 100) : 0);
+                }}
+                style={{ width: "100%", minHeight: 38 }}
+              />
+              <small>Allocated {Number(selectedLocation?.area_sqft || 0).toLocaleString("en-IN")} sq.ft · {photoType === "completed" ? 100 : progress}% completed</small>
+            </label>
+          ) : (
+            <label>
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>Work Done (%) for Legacy Location</div>
+              <input type="number" min={0} max={100} step={1}
+                value={photoType === "completed" ? 100 : progress} disabled={photoType === "completed"}
+                onChange={(event) => setProgress(Number(event.target.value))}
+                style={{ width: "100%", minHeight: 38 }}
+              />
+            </label>
+          )}
         </div>
 
         <label>
@@ -455,18 +482,7 @@ export function LiveCaptureClient({
           />
         </label>
 
-        {photoType === "completed" ? (
-          <label style={{ display: "flex", gap: 9, alignItems: "center" }}>
-            <input
-              type="checkbox"
-              checked={markCompleted}
-              onChange={(event) =>
-                setMarkCompleted(event.target.checked)
-              }
-            />
-            Mark this work location completed after the live photo is saved
-          </label>
-        ) : null}
+
       </section>
 
       <section className="easy-camera"

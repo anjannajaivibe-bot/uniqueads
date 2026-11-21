@@ -60,26 +60,32 @@ export default async function FinancePage() {
     <>
       <PageHeader
         title="Finance"
-        description="Invoices, collections, operating expenses, worker payouts and order profitability."
+        description="Company work-order receipts, subcontractor settlements, expenses and entity-wise financial position."
         action={
           <div className="header-actions">
-            <Link href="/admin/finance/worker-payments" className="button button-secondary">Worker Payments</Link>
+            <Link href="/admin/finance/collections" className="button button-primary">+ Company Receipt</Link>
+            <Link href="/admin/finance/worker-payments" className="button button-secondary">Subcontractor Payments</Link>
             <Link href="/admin/finance/invoices/new" className="button button-primary">+ Create Invoice</Link>
           </div>
         }
       />
 
       <div className="finance-kpi-grid">
+        <StatCard label="Company Order Value" value={currency(s.total_order_value)} />
+        <StatCard label="Unique Ads Order Value" value={currency(s.unique_ads_order_value)} />
+        <StatCard label="Unique Advertisers Order Value" value={currency(s.unique_advertisers_order_value)} />
+        <StatCard label="Company Receipts" value={currency(s.company_collected)} />
+        <StatCard label="Company Outstanding" value={currency(s.company_outstanding)} />
         <StatCard label="Total Invoiced" value={currency(invoiceTotal)} />
-        <StatCard label="Collected" value={currency(invoicePaid)} />
-        <StatCard label="Outstanding" value={currency(outstanding)} />
+        <StatCard label="Invoice Collections" value={currency(invoicePaid)} />
+        <StatCard label="Invoice Outstanding" value={currency(outstanding)} />
         <StatCard
           label="Collections This Month"
           value={currency(s.collections_month)}
         />
         <StatCard label="Expenses This Month" value={currency(s.expenses_month)} />
         <StatCard
-          label="Worker Payments This Month"
+          label="Subcontractor Payments This Month"
           value={currency(s.worker_payments_month)}
         />
         <StatCard
@@ -92,8 +98,8 @@ export default async function FinancePage() {
       <section className="panel finance-section">
         <div className="panel-head">
           <div>
-            <h2>Invoices & Collections</h2>
-            <p>Open an invoice to issue it, print it or record customer payments.</p>
+            <h2>Generated Invoices</h2>
+            <p>Company receipts should be entered through Company Collections; invoices can be prepared and printed separately.</p>
           </div>
           <Link href="/admin/finance/invoices/new" className="button button-secondary">
             + New Invoice

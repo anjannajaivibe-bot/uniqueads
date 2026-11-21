@@ -78,6 +78,23 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      if (role === "supervisor" && !workerId) {
+        return redirectToUsers(request, "error", "Select the subcontractor profile to link this login.");
+      }
+      if (role === "supervisor") {
+        const eligible = await sql`
+          SELECT w.id FROM public.workers w
+          WHERE w.id = ${workerId}::uuid AND w.is_active = true
+            AND NOT EXISTS (
+              SELECT 1 FROM public.app_users u
+              WHERE u.worker_id = w.id AND u.role = 'supervisor' AND u.is_active = true
+            )
+          LIMIT 1
+        `;
+        if (!eligible.length) {
+          return redirectToUsers(request, "error", "This subcontractor is inactive or already has a login.");
+        }
+      }
       if (!ROLES.has(role)) {
         return redirectToUsers(request, "error", "Invalid role.");
       }

@@ -60,6 +60,12 @@ export default async function SettingsPage() {
         description="Company identity, GST, banking, document defaults and controlled staff access."
       />
 
+      <section className="panel" style={{marginBottom:24}}>
+        <h2>Unique Ads & Unique Advertisers</h2>
+        <p>Manage the two separate receiving entities' legal names, GST and banking information. Work orders and invoices must use the correct entity.</p>
+        <Link href="/admin/settings/entities" className="button button-primary">Manage Receiving Entities</Link>
+      </section>
+
       <div className="settings-layout">
         <section className="settings-main-column">
           <form action={saveCompanySettings} className="form-card">
