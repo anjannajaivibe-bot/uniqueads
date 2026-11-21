@@ -367,56 +367,68 @@ export async function assignWorkerToOrder(formData: FormData) {
 }
 
 
-/** Record a confirmed work order directly against a customer; quotations are optional. */
+/** Incoming company work order. All pricing is based on agreed square feet. */
 export async function createWorkOrder(formData: FormData) {
   const actor = await requireRoles(ACCESS.operations);
   const customerId = clean(formData.get("customer_id"));
   const campaignName = clean(formData.get("campaign_name"));
-  const advertisingType = clean(formData.get("advertising_type"));
-  const amountText = clean(formData.get("total_order_amount"));
-  const advanceText = clean(formData.get("advance_received"));
-  const amount = Number(amountText ?? "0");
-  const advance = Number(advanceText ?? "0");
-
-  if (!customerId || !/^[0-9a-f-]{36}$/i.test(customerId)) {
-    throw new Error("Please select a customer.");
-  }
-  if (!campaignName) throw new Error("Work order description is required.");
-  if (!Number.isFinite(amount) || amount < 0 || !Number.isFinite(advance) || advance < 0) {
-    throw new Error("Order value and advance must be valid nonnegative amounts.");
-  }
-  if (advance > amount) throw new Error("Advance cannot exceed the work order value.");
+  const companyWorkOrderNo = clean(formData.get("client_work_order_no"));
+  const companyInvoiceNo = clean(formData.get("client_invoice_no"));
+  const entityCode = clean(formData.get("entity_code"));
+  const area = Number(clean(formData.get("contract_area_sqft")));
+  const rate = Number(clean(formData.get("client_rate_per_sqft")));
   const startDate = clean(formData.get("start_date"));
   const dueDate = clean(formData.get("due_date"));
+
+  if (!customerId || !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(customerId)) {
+    throw new Error("Select a valid company.");
+  }
+  if (!campaignName || !companyWorkOrderNo) {
+    throw new Error("Work description and company work order number are required.");
+  }
+  if (entityCode !== "unique_ads" && entityCode !== "unique_advertisers") {
+    throw new Error("Select the receiving business entity.");
+  }
+  if (!Number.isFinite(area) || area <= 0 || !Number.isFinite(rate) || rate < 0) {
+    throw new Error("Area in sq.ft must be positive and agreed rate must be nonnegative.");
+  }
+  if (area > 999999999 || rate > 999999999) throw new Error("Area or rate is too large.");
+  const amount = Math.round(area * rate * 100) / 100;
+  if (!Number.isFinite(amount) || amount > 999999999999) throw new Error("Invalid total value.");
   if (startDate && dueDate && dueDate < startDate) {
     throw new Error("Due date cannot be earlier than start date.");
   }
 
   const orderNo = `UA-ORD-${new Date().getFullYear()}-${randomUUID().slice(0, 8).toUpperCase()}`;
   const rows = await sql`
-    INSERT INTO orders (
-      order_no, customer_id, campaign_name, advertising_type, start_date,
-      due_date, status, total_order_amount, advance_received,
-      work_instructions, created_by
+    WITH created_order AS (
+      INSERT INTO orders (
+        order_no, customer_id, campaign_name, advertising_type, start_date,
+        due_date, status, total_order_amount, advance_received,
+        work_instructions, created_by, entity_code,
+        client_work_order_no, client_invoice_no, contract_area_sqft, client_rate_per_sqft
+      )
+      SELECT ${orderNo}, c.id, ${campaignName}, ${clean(formData.get("advertising_type"))},
+        ${startDate}, ${dueDate}, 'order_received', ${amount}, 0,
+        ${clean(formData.get("work_instructions"))}, ${actor.id}::uuid,
+        ${entityCode}, ${companyWorkOrderNo}, ${companyInvoiceNo}, ${area}, ${rate}
+      FROM customers c
+      WHERE c.id = ${customerId}::uuid AND c.is_active = true
+      RETURNING id
+    ),
+    logged AS (
+      INSERT INTO activity_logs(actor_user_id,action,entity_type,entity_id,description,metadata)
+      SELECT ${actor.id}::uuid, 'order_created','order',co.id,
+        ${'Company work order received: ' + companyWorkOrderNo},
+        jsonb_build_object('entity',${entityCode},'sqft',${area},'rate',${rate},'value',${amount})
+      FROM created_order co RETURNING id
     )
-    SELECT
-      ${orderNo}, c.id, ${campaignName}, ${advertisingType}, ${startDate},
-      ${dueDate}, 'order_received', ${Math.round(amount * 100) / 100},
-      ${Math.round(advance * 100) / 100}, ${clean(formData.get("work_instructions"))},
-      ${actor.id}::uuid
-    FROM customers c
-    WHERE c.id = ${customerId}::uuid AND c.is_active = true
-    RETURNING id
+    SELECT co.id FROM created_order co WHERE EXISTS (SELECT 1 FROM logged)
   `;
-  if (!rows.length) throw new Error("Customer does not exist or is inactive.");
 
-  const orderId = String(rows[0].id);
-  await logOrderActivity(actor.id, orderId, "order_created", `Work order ${orderNo} created directly.`, {
-    total_order_amount: amount,
-    advance_received: advance,
-  });
+  if (!rows.length) throw new Error("Company not found or inactive.");
   revalidatePath("/admin");
   revalidatePath("/admin/orders");
   revalidatePath("/admin/finance");
-  redirect(`/admin/orders/${orderId}`);
+  redirect(`/admin/orders/${rows[0].id}`);
 }
