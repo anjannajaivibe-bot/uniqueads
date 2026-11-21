@@ -74,7 +74,6 @@ export default async function CustomerDetailPage({
     quotations,
     invoices,
     payments,
-    leads,
     activity,
   ] = await Promise.all([
     getCustomerById(id),
@@ -369,27 +368,7 @@ export default async function CustomerDetailPage({
             </div>
           </article>
 
-          {leads.length > 0 ? (
-            <article className="panel">
-              <div className="panel-head">
-                <div>
-                  <h2>Lead History</h2>
-                  <p>Original enquiries converted into this customer account.</p>
-                </div>
-              </div>
-              <div className="customer-mini-list">
-                {leads.map((row: any) => (
-                  <Link href={`/admin/leads/${row.id}`} key={row.id} className="customer-mini-row">
-                    <div>
-                      <strong>{row.lead_no}</strong>
-                      <span>{row.advertising_type || "Advertising enquiry"} · {row.location || "Location not set"}</span>
-                    </div>
-                    <span className={`status status-${row.status}`}>{label(row.status)}</span>
-                  </Link>
-                ))}
-              </div>
-            </article>
-          ) : null}
+
         </section>
 
         <aside className="customer-side-column">
