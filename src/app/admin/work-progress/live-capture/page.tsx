@@ -31,6 +31,8 @@ export default async function LiveCapturePage() {
         ol.district,
         ol.state,
         ol.progress_percent,
+        ol.area_sqft,
+        ol.completed_area_sqft,
         ol.status
       from public.order_locations ol
       join public.orders o on o.id = ol.order_id
@@ -64,6 +66,8 @@ export default async function LiveCapturePage() {
         ol.district,
         ol.state,
         ol.progress_percent,
+        ol.area_sqft,
+        ol.completed_area_sqft,
         ol.status
       from public.order_locations ol
       join public.orders o on o.id = ol.order_id
