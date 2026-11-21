@@ -154,3 +154,24 @@ BEGIN
   );
   RETURN QUERY SELECT v_payment_id,(v_budget-v_paid-p_amount)::numeric;
 END $$;
+
+-- Separate legal, tax and bank profiles. Names are supplied; other fields stay blank.
+CREATE TABLE IF NOT EXISTS public.business_entities (
+  code text PRIMARY KEY CHECK (code IN ('unique_ads','unique_advertisers')),
+  display_name text NOT NULL,
+  legal_name text,
+  gstin text,
+  pan text,
+  address text,
+  phone text,
+  email text,
+  bank_name text,
+  bank_account_name text,
+  bank_account_number text,
+  ifsc_code text,
+  upi_id text,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO public.business_entities(code,display_name)
+VALUES ('unique_ads','Unique Ads'),('unique_advertisers','Unique Advertisers')
+ON CONFLICT (code) DO NOTHING;
