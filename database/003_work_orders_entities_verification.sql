@@ -22,7 +22,7 @@ BEGIN
   END IF;
 END $$;
 CREATE INDEX IF NOT EXISTS idx_orders_entity_created ON public.orders(entity_code, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_orders_company_work_ref ON public.orders(customer_id,client_work_order_no) WHERE client_work_order_no IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_orders_company_work_ref ON public.orders(customer_id,entity_code,client_work_order_no) WHERE client_work_order_no IS NOT NULL;
 ALTER TABLE public.order_locations
   ADD COLUMN IF NOT EXISTS verified_at timestamptz,
   ADD COLUMN IF NOT EXISTS verified_by uuid REFERENCES public.app_users(id) ON DELETE SET NULL;
