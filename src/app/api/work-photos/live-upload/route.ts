@@ -277,106 +277,55 @@ export async function POST(request: NextRequest) {
     : allocatedSqft > 0 ? Math.min(100, Math.round(finalArea / allocatedSqft * 100))
     : Math.round(progressPercent);
 
+  // Site progress, update history and photo metadata commit in one DB statement.
   const inserted = await sql`
-    with new_update as (
-      insert into public.work_updates
-        (
-          order_id,
-          order_location_id,
-          status,
-          progress_percent,
-          completed_area_sqft,
-          update_text,
-          latitude,
-          longitude,
-          recorded_at,
-          created_by
-        )
-      values
-        (
-          ${orderId},
-          ${locationId},
-          ${updateStatus},
-          ${finalProgress},
-          ${allocatedSqft > 0 ? finalArea : null},
-          ${note},
-          ${latitude},
-          ${longitude},
-          now(),
-          ${user.id}
-        )
-      returning id
-    )
-    insert into public.work_photos
-      (
-        order_id,
-        order_location_id,
-        work_update_id,
-        photo_type,
-        completed_area_sqft,
-        file_url,
-        caption,
-        latitude,
-        longitude,
-        captured_at,
-        uploaded_by,
-        gps_accuracy_m,
-        device_captured_at,
-        server_received_at,
-        captured_by_username,
-        capture_source,
-        is_live_capture
+    WITH updated_site AS (
+      UPDATE public.order_locations
+      SET
+        status = CASE
+          WHEN ${photoType} = 'completed' THEN 'quality_check'
+          WHEN status IN ('pending','assigned') THEN 'in_progress'
+          ELSE status
+        END,
+        progress_percent = GREATEST(progress_percent, ${finalProgress}),
+        completed_area_sqft = GREATEST(COALESCE(completed_area_sqft,0), ${allocatedSqft > 0 ? finalArea : 0}),
+        completed_date = CASE WHEN ${photoType} = 'completed' THEN NULL ELSE completed_date END,
+        updated_at = now()
+      WHERE id = ${locationId}::uuid
+        AND order_id = ${orderId}::uuid
+        AND status NOT IN ('completed','cancelled')
+      RETURNING id
+    ),
+    new_update AS (
+      INSERT INTO public.work_updates (
+        order_id, order_location_id, status, progress_percent,
+        completed_area_sqft, update_text, latitude, longitude, recorded_at, created_by
       )
-    select
-      ${orderId},
-      ${locationId},
-      new_update.id,
-      ${photoType},
-      ${allocatedSqft > 0 ? finalArea : null},
-      ${`s3://${bucket}/${objectKey}`},
-      ${note},
-      ${latitude},
-      ${longitude},
-      ${deviceCapturedAt.toISOString()},
-      ${user.id},
-      ${gpsAccuracyM},
-      ${deviceCapturedAt.toISOString()},
-      now(),
-      ${String(user.username || user.full_name || user.id)},
-      'camera_live',
-      true
-    from new_update
-    returning id, created_at
+      SELECT ${orderId}::uuid, ${locationId}::uuid, ${updateStatus}, ${finalProgress},
+        ${allocatedSqft > 0 ? finalArea : null}, ${note}, ${latitude}, ${longitude},
+        now(), ${user.id}::uuid
+      FROM updated_site
+      RETURNING id
+    ),
+    new_photo AS (
+      INSERT INTO public.work_photos (
+        order_id,order_location_id,work_update_id,photo_type,completed_area_sqft,
+        file_url,caption,latitude,longitude,captured_at,uploaded_by,gps_accuracy_m,
+        device_captured_at,server_received_at,captured_by_username,capture_source,is_live_capture
+      )
+      SELECT ${orderId}::uuid,${locationId}::uuid,nu.id,${photoType},
+        ${allocatedSqft > 0 ? finalArea : null},${`s3://${bucket}/${objectKey}`},
+        ${note},${latitude},${longitude},${deviceCapturedAt.toISOString()},
+        ${user.id}::uuid,${gpsAccuracyM},${deviceCapturedAt.toISOString()},
+        now(),${String(user.username || user.full_name || user.id)},'camera_live',true
+      FROM new_update nu
+      RETURNING id,created_at
+    )
+    SELECT * FROM new_photo
   `;
 
-  if (photoType === "completed") {
-    await sql`
-      update public.order_locations
-      set status = 'quality_check',
-          progress_percent = 100,
-          completed_area_sqft = ${allocatedSqft > 0 ? finalArea : null},
-          completed_date = NULL,
-          updated_at = now()
-      where id = ${locationId}
-        and order_id = ${orderId}
-    `;
-  } else {
-    await sql`
-      update public.order_locations
-      set status = case
-            when status in ('pending', 'assigned') then 'in_progress'
-            else status
-          end,
-          progress_percent = greatest(
-            progress_percent,
-            ${finalProgress}
-          ),
-          completed_area_sqft = greatest(COALESCE(completed_area_sqft,0), ${allocatedSqft > 0 ? finalArea : 0}),
-          updated_at = now()
-      where id = ${locationId}
-        and order_id = ${orderId}
-        and status <> 'completed'
-    `;
+  if (!inserted.length) {
+    return NextResponse.json({error:"Work location changed during upload; please refresh."},{status:409});
   }
 
   return NextResponse.json({
