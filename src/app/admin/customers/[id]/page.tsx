@@ -113,11 +113,11 @@ export default async function CustomerDetailPage({
             <Link href="/admin/customers" className="button button-secondary">
               Back to Customers
             </Link>
-            <Link
-              href={`/admin/quotations/new?customer=${c.id}`}
-              className="button button-primary"
-            >
-              + New Quotation
+            <Link href={`/admin/orders/new?customer=${c.id}`} className="button button-primary">
+              + New Work Order
+            </Link>
+            <Link href={`/admin/quotations/new?customer=${c.id}`} className="button button-secondary">
+              + Quotation
             </Link>
             {c.phone ? (
               <a href={`tel:${String(c.phone).replace(/\s/g, "")}`} className="button button-secondary">
@@ -154,7 +154,7 @@ export default async function CustomerDetailPage({
 
         <div className="customer-kpis">
           <div><span>Order Value</span><strong>{currency(orderValue)}</strong></div>
-          <div><span>Orders</span><strong>{orders.length}</strong></div>
+          <div><span>Work Orders</span><strong>{orders.length}</strong></div>
           <div><span>Quotations</span><strong>{quotations.length}</strong></div>
           <div><span>Invoices</span><strong>{invoices.length}</strong></div>
         </div>
