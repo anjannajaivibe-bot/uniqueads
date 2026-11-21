@@ -287,6 +287,7 @@ export default async function WorkLocationPage({
         </section>
 
         <aside className="work-side-column">
+          {currentUser.role !== "supervisor" ? (
           <article className="panel work-team-card">
             <div className="panel-head">
               <div>
@@ -315,6 +316,7 @@ export default async function WorkLocationPage({
               )}
             </div>
           </article>
+          ) : null}
 
           <article className="panel work-proof-checklist">
             <div className="panel-head">
