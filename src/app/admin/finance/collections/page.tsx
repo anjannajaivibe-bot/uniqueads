@@ -53,7 +53,7 @@ export default async function CompanyCollectionsPage({searchParams}: {
             <select name="order_id" required defaultValue={selected?.id || ""}>
               <option value="">Select work order</option>
               {orders.filter((o:any)=>o.status !== "cancelled").map((o:any)=>
-                <option value={o.id} key={o.id}>{o.company_name} | {o.order_no} | {o.client_work_order_no || "No external reference"} | {o.entity_code === "unique_advertisers" ? "Unique Advertisers" : "Unique Ads"} | Balance {money(o.outstanding)}</option>)}
+                <option value={o.id} key={o.id}>{o.company_name} | {o.order_no} | {o.client_work_order_no || o.client_invoice_no || "No external reference"} | {o.entity_code === "unique_advertisers" ? "Unique Advertisers" : "Unique Ads"} | Balance {money(o.outstanding)}</option>)}
             </select>
           </label>
           {selected ? <div className="full" style={{padding:12,background:"#f4f7fa",borderRadius:10}}>
@@ -82,7 +82,7 @@ export default async function CompanyCollectionsPage({searchParams}: {
           {orders.map((o:any)=><tr key={o.id}>
             <td>{o.company_name}</td>
             <td>{o.entity_code==="unique_advertisers" ? "Unique Advertisers":"Unique Ads"}</td>
-            <td><Link href={`/admin/orders/${o.id}`}>{o.client_work_order_no || o.order_no}</Link></td>
+            <td><Link href={`/admin/orders/${o.id}`}>{o.client_work_order_no || o.client_invoice_no || o.order_no}</Link></td>
             <td className="align-right">{money(o.total_order_amount)}</td>
             <td className="align-right">{money(o.received)}</td>
             <td className="align-right"><strong>{money(o.outstanding)}</strong></td>
