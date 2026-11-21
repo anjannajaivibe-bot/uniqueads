@@ -101,6 +101,8 @@ export default async function OrderDetailPage({
   const balance = Math.max(0, Number(o.total_order_amount) - received);
 
   const locationCount = locations.length;
+  const assignedAreaSqft = locations.filter((l:any)=>l.status !== "cancelled").reduce((sum:number,l:any)=>sum+Number(l.area_sqft || 0),0);
+  const remainingAreaSqft = o.contract_area_sqft === null ? null : Math.max(0,Number(o.contract_area_sqft) - assignedAreaSqft);
   const completedLocations = locations.filter(
     (location: any) => location.status === "completed"
   ).length;
@@ -261,7 +263,7 @@ export default async function OrderDetailPage({
             <div className="form-section-title">
               <div>
                 <h2>Campaign Locations</h2>
-                <p>Track each wall, town, road or advertising location separately.</p>
+                <p>Allocate the company contract to individual wall and advertising sites in square feet. {remainingAreaSqft !== null ? `Remaining to allocate: ${remainingAreaSqft.toLocaleString("en-IN")} sq.ft.` : ""}</p>
               </div>
             </div>
 
@@ -306,8 +308,8 @@ export default async function OrderDetailPage({
                   <input name="wall_size" placeholder="Example: 20 ft × 10 ft" />
                 </label>
                 <label>
-                  <span>Area (sq.ft)</span>
-                  <input name="area_sqft" type="number" min="0" step="0.01" />
+                  <span>Total Site Area (sq.ft) *</span>
+                  <input name="area_sqft" type="number" min="0.01" step="0.01" required />
                 </label>
                 <label>
                   <span>Quantity</span>
@@ -365,7 +367,8 @@ export default async function OrderDetailPage({
                     <div className="execution-location-body">
                       <div className="location-meta-grid">
                         <div><span>Planned</span><strong>{date(location.planned_date)}</strong></div>
-                        <div><span>Area</span><strong>{location.area_sqft ? `${location.area_sqft} sq.ft` : "Not set"}</strong></div>
+                        <div><span>Allocated Area</span><strong>{location.area_sqft ? `${location.area_sqft} sq.ft` : "Not set"}</strong></div>
+                        <div><span>Reported Completed</span><strong>{location.completed_area_sqft ? `${location.completed_area_sqft} sq.ft` : "0 sq.ft"}</strong></div>
                         <div><span>Quantity</span><strong>{location.quantity}</strong></div>
                         <div><span>Workers</span><strong>{location.worker_count}</strong></div>
                         <div><span>Client Approved</span><strong>{location.client_approved ? "Yes" : "No"}</strong></div>
