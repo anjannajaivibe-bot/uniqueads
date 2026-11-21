@@ -93,6 +93,7 @@ export async function addWorkUpdate(formData: FormData) {
             FROM order_worker_assignments owa
             WHERE owa.order_id = o.id
               AND owa.worker_id = ${currentUser.worker_id}::uuid
+              AND (owa.order_location_id = ol.id OR owa.order_location_id IS NULL)
               AND owa.released_on IS NULL
           )
         )
