@@ -7,7 +7,7 @@ import Link from "next/link";
 import type { CurrentAppUser } from "@/lib/auth/authorization";
 // Client-safe display permissions. Actual access remains enforced on the server.
 const ACCESS = {
- sales: ["super_admin", "operations_manager", "sales"],
+ operations: ["super_admin", "operations_manager"],
  field: ["super_admin", "operations_manager", "supervisor"],
  finance: ["super_admin", "accounts"],
  reports: ["super_admin", "accounts", "operations_manager"],
@@ -17,7 +17,7 @@ function roleAllowed(role: string, allowed: readonly string[]) { return allowed.
 
 const navigation = [
   { label: "Dashboard", href: "/admin", icon: "▦", roles: null },
-  { label: "Customers", href: "/admin/customers", icon: "◉", roles: ACCESS.sales },
+  { label: "Customers", href: "/admin/customers", icon: "◉", roles: ACCESS.operations },
   { label: "Quotations", href: "/admin/quotations", icon: "▤", roles: ACCESS.sales },
   { label: "Work Orders", href: "/admin/orders", icon: "▣", roles: ACCESS.field },
   { label: "Work Progress", href: "/admin/work-progress", icon: "◫", roles: ACCESS.field },
