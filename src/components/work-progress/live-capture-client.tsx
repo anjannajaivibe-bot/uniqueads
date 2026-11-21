@@ -52,7 +52,6 @@ export function LiveCaptureClient({
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const submittingRef = useRef(false);
-  const [markCompleted, setMarkCompleted] = useState(false);
 
   const selectedLocation = useMemo(
     () => locations.find((item) => item.id === selectedLocationId),
@@ -161,6 +160,14 @@ export function LiveCaptureClient({
       return;
     }
 
+    let freshPosition: PositionData;
+    try {
+      freshPosition = await requestLocation();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Fresh GPS unavailable. Retake the photo.");
+      return;
+    }
+
     const maxWidth = 1600;
     const scale = Math.min(1, maxWidth / sourceWidth);
     const width = Math.round(sourceWidth * scale);
@@ -182,7 +189,8 @@ export function LiveCaptureClient({
     const lines = [
       "Unique Ads - LIVE WORK PHOTO",
       `${selectedLocation.order_no} | ${selectedLocation.location_name}`,
-      `${position.latitude.toFixed(6)}, ${position.longitude.toFixed(6)} | ±${Math.round(position.accuracy)} m`,
+      [selectedLocation.city, selectedLocation.district, selectedLocation.state].filter(Boolean).join(", ") || "Address not recorded",
+      `GPS: ${freshPosition.latitude.toFixed(6)}, ${freshPosition.longitude.toFixed(6)} | Accuracy ±${Math.round(freshPosition.accuracy)} m`,
       `${captured.toLocaleString("en-IN")} | By: ${username}`,
     ];
 
@@ -201,7 +209,8 @@ export function LiveCaptureClient({
       context.fillText(
         line,
         padding,
-        height - boxHeight + padding + index * lineHeight
+        height - boxHeight + padding + index * lineHeight,
+        width - padding * 2
       );
     });
 
@@ -271,7 +280,7 @@ export function LiveCaptureClient({
       form.append("note", note);
       form.append(
         "mark_completed",
-        String(photoType === "completed" && markCompleted)
+        String(photoType === "completed")
       );
 
       const controller = new AbortController();
@@ -294,8 +303,8 @@ export function LiveCaptureClient({
       }
 
       setStatus(
-        photoType === "completed" && markCompleted
-          ? "Live completion photo saved and location marked completed."
+        photoType === "completed"
+          ? "Completion proof saved. Unique Ads will review and verify this work."
           : "Live work-progress photo saved successfully."
       );
 
@@ -414,7 +423,6 @@ export function LiveCaptureClient({
                 const value = event.target.value;
                 setPhotoType(value);
                 if (value === "completed") setProgress(100);
-                if (value !== "completed") setMarkCompleted(false);
               }}
               style={{ width: "100%", minHeight: 42 }}
             >
@@ -455,18 +463,7 @@ export function LiveCaptureClient({
           />
         </label>
 
-        {photoType === "completed" ? (
-          <label style={{ display: "flex", gap: 9, alignItems: "center" }}>
-            <input
-              type="checkbox"
-              checked={markCompleted}
-              onChange={(event) =>
-                setMarkCompleted(event.target.checked)
-              }
-            />
-            Mark this work location completed after the live photo is saved
-          </label>
-        ) : null}
+
       </section>
 
       <section className="easy-camera"
