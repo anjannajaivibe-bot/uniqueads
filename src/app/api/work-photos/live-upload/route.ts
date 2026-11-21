@@ -183,6 +183,7 @@ export async function POST(request: NextRequest) {
             FROM public.order_worker_assignments owa
             WHERE owa.order_id = o.id
               AND owa.worker_id = ${user.worker_id || null}::uuid
+              AND (owa.order_location_id = ol.id OR owa.order_location_id IS NULL)
               AND owa.released_on IS NULL
           )
         )
@@ -191,6 +192,8 @@ export async function POST(request: NextRequest) {
     join public.orders o on o.id = ol.order_id
     where ol.id = ${locationId}
       and ol.order_id = ${orderId}
+      and ol.status NOT IN ('completed','cancelled')
+      and o.status <> 'cancelled'
     limit 1
   `;
 
@@ -245,7 +248,7 @@ export async function POST(request: NextRequest) {
 
   const updateStatus =
     photoType === "completed"
-      ? "completed"
+      ? "quality_check"
       : photoType === "before"
         ? "started"
         : "in_progress";
@@ -321,12 +324,12 @@ export async function POST(request: NextRequest) {
     returning id, created_at
   `;
 
-  if (markCompleted) {
+  if (photoType === "completed") {
     await sql`
       update public.order_locations
-      set status = 'completed',
+      set status = 'quality_check',
           progress_percent = 100,
-          completed_date = current_date,
+          completed_date = NULL,
           updated_at = now()
       where id = ${locationId}
         and order_id = ${orderId}
@@ -353,6 +356,7 @@ export async function POST(request: NextRequest) {
     ok: true,
     photoId: inserted[0]?.id,
     serverReceivedAt: inserted[0]?.created_at,
+    reviewStatus: photoType === "completed" ? "quality_check" : "in_progress",
     location: locations[0],
   });
 }
