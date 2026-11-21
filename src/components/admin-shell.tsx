@@ -21,13 +21,15 @@ const navigation = [
   { label: "Quotations", href: "/admin/quotations", icon: "▤", roles: ACCESS.operations },
   { label: "Work Orders", href: "/admin/orders", icon: "▣", roles: ACCESS.field },
   { label: "Work Progress", href: "/admin/work-progress", icon: "◫", roles: ACCESS.field },
-  { label: "Workers", href: "/admin/workers", icon: "◌", roles: ACCESS.field },
+  { label: "Subcontractors", href: "/admin/workers", icon: "◌", roles: ACCESS.field },
   { label: "Finance", href: "/admin/finance", icon: "₹", roles: ACCESS.finance },
+  { label: "Company Collections", href: "/admin/finance/collections", icon: "₹", roles: ACCESS.finance },
   { label: "Reports", href: "/admin/reports", icon: "↗", roles: ACCESS.reports },
   { label: "Settings", href: "/admin/settings", icon: "⚙", roles: ACCESS.settings },
 ] as const;
 
 function roleLabel(role: string) {
+  if (role === "supervisor") return "Subcontractor";
   return role
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
