@@ -3,7 +3,6 @@ import type { CurrentAppUser } from "@/lib/auth/authorization";
 import { ACCESS, roleAllowed } from "@/lib/auth/permissions";
 
 export async function getDashboardMetrics(user: CurrentAppUser) {
-  const canSales = roleAllowed(user.role, ACCESS.sales);
   const canField = roleAllowed(user.role, ACCESS.field);
   const canFinance = roleAllowed(user.role, ACCESS.finance);
   const canCommercial =
@@ -14,18 +13,6 @@ export async function getDashboardMetrics(user: CurrentAppUser) {
 
   const rows = await sql`
     SELECT
-      CASE WHEN ${canSales} THEN (
-        SELECT count(*)::int
-        FROM leads
-        WHERE status IN ('new','contacted','requirement_received','quotation_sent','negotiation')
-      ) ELSE 0 END AS open_leads,
-
-      CASE WHEN ${canSales} THEN (
-        SELECT count(*)::int
-        FROM quotations
-        WHERE status IN ('draft','sent')
-      ) ELSE 0 END AS pending_quotations,
-
       CASE WHEN ${canField} THEN (
         SELECT count(*)::int
         FROM orders o
