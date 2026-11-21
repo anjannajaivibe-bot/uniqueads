@@ -113,6 +113,9 @@ export default async function NewInvoicePage({
           ""
         }
         orderAmount={Number(s.total_order_amount || 0)}
+        contractAreaSqft={s.contract_area_sqft ? Number(s.contract_area_sqft) : null}
+        clientRatePerSqft={s.client_rate_per_sqft !== null ? Number(s.client_rate_per_sqft) : null}
+        receivingEntity={String(s.entity_code || "unique_ads")}
         invoiceDate={today.toISOString().slice(0, 10)}
         defaultDueDate={due.toISOString().slice(0, 10)}
       />
