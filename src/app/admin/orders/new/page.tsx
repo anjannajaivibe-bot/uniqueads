@@ -45,8 +45,8 @@ export default async function NewWorkOrderPage({
             </select>
           </label>
           <label>
-            <span>Company Work Order No. *</span>
-            <input name="client_work_order_no" required maxLength={120} placeholder="Company reference number" />
+            <span>Company Work Order No. (if supplied)</span>
+            <input name="client_work_order_no" maxLength={120} placeholder="Company reference number" />
           </label>
           <label>
             <span>Company Invoice No. (if supplied)</span>
