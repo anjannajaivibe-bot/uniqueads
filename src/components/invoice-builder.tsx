@@ -31,6 +31,9 @@ export function InvoiceBuilder({
   sourceIgst,
   sourcePaymentTerms,
   orderAmount,
+  contractAreaSqft,
+  clientRatePerSqft,
+  receivingEntity,
   invoiceDate,
   defaultDueDate,
 }: {
@@ -50,6 +53,9 @@ export function InvoiceBuilder({
   sourceIgst: number;
   sourcePaymentTerms: string;
   orderAmount: number;
+  contractAreaSqft: number | null;
+  clientRatePerSqft: number | null;
+  receivingEntity: string;
   invoiceDate: string;
   defaultDueDate: string;
 }) {
@@ -66,9 +72,9 @@ export function InvoiceBuilder({
           {
             id: crypto.randomUUID(),
             description: campaignName,
-            quantity: 1,
-            unit: "job",
-            rate: orderAmount,
+            quantity: contractAreaSqft || 1,
+            unit: contractAreaSqft ? "sq.ft" : "job",
+            rate: contractAreaSqft ? (clientRatePerSqft ?? 0) : orderAmount,
           },
         ];
 
@@ -139,6 +145,7 @@ export function InvoiceBuilder({
       <input type="hidden" name="items_json" value={JSON.stringify(items)} />
 
       <section className="panel invoice-source-card">
+        <div><span>Issuing Entity</span><strong>{receivingEntity === "unique_advertisers" ? "Unique Advertisers" : "Unique Ads"}</strong></div>
         <div>
           <span>Order</span>
           <strong>{orderNo}</strong>
