@@ -24,7 +24,7 @@ function nonNegativeInteger(value: FormDataEntryValue | null) {
   const text = clean(value);
   if (!text) return null;
   const parsed = Number.parseInt(text, 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  return Number.isSafeInteger(parsed) && parsed >= 0 && /^\d+$/.test(text) ? parsed : null;
 }
 
 async function logOrderActivity(
@@ -225,6 +225,19 @@ export async function updateOrderLocation(formData: FormData) {
     throw new Error("Invalid location update.");
   }
 
+  if (status === "completed") {
+    const evidence = await sql`
+      SELECT id FROM work_photos
+      WHERE order_id = ${orderId}::uuid
+        AND order_location_id = ${locationId}::uuid
+        AND photo_type = 'completed' AND is_live_capture = true
+      LIMIT 1
+    `;
+    if (evidence.length === 0) {
+      throw new Error("Verified completion requires a live GPS completion photo. Ask the subcontractor to submit proof.");
+    }
+  }
+
   const safeProgress =
     status === "completed"
       ? 100
@@ -240,6 +253,8 @@ export async function updateOrderLocation(formData: FormData) {
         ELSE NULL
       END,
       client_approved = ${clean(formData.get("client_approved")) === "true"},
+      verified_at = CASE WHEN ${status} = 'completed' THEN now() ELSE NULL END,
+      verified_by = CASE WHEN ${status} = 'completed' THEN ${currentUser.id}::uuid ELSE NULL END,
       notes = ${clean(formData.get("notes"))},
       updated_at = now()
     WHERE id = ${locationId}::uuid
@@ -247,9 +262,8 @@ export async function updateOrderLocation(formData: FormData) {
     RETURNING location_name
   `;
 
-  const locationName = rows[0]?.location_name
-    ? String(rows[0].location_name)
-    : "Location";
+  if (!rows.length) throw new Error("Work location not found on this work order.");
+  const locationName = String(rows[0].location_name);
 
   await logOrderActivity(
     currentUser.id,
