@@ -293,11 +293,37 @@ export async function assignWorkerToOrder(formData: FormData) {
     throw new Error("Order and worker are required.");
   }
 
-  const paymentMode = clean(formData.get("agreed_payment_mode"));
-  const allowedModes = ["daily", "per_wall", "per_sqft", "fixed", "milestone"];
+  // New subcontract allocations are strictly measured and priced in square feet.
+  const paymentMode = "per_sqft";
+  const rate = nonNegativeNumber(formData.get("agreed_rate"));
+  if (rate === null) throw new Error("Enter the agreed subcontract rate per sq.ft.");
 
-  if (paymentMode && !allowedModes.includes(paymentMode)) {
-    throw new Error("Invalid worker payment mode.");
+  if (locationId) {
+    const validSite = await sql`
+      SELECT id FROM order_locations WHERE id = ${locationId}::uuid
+        AND order_id = ${orderId}::uuid AND status <> 'cancelled' LIMIT 1
+    `;
+    if (!validSite.length) throw new Error("Selected site does not belong to this work order.");
+  }
+
+  const areaRows = await sql`
+    SELECT CASE WHEN ${locationId}::text IS NOT NULL
+      THEN (SELECT ol.area_sqft FROM order_locations ol
+        WHERE ol.id = ${locationId}::uuid AND ol.order_id = o.id)
+      ELSE COALESCE(o.contract_area_sqft,
+        (SELECT sum(ol.area_sqft) FROM order_locations ol
+          WHERE ol.order_id=o.id AND ol.status <> 'cancelled'))
+      END AS allocated_sqft
+    FROM orders o WHERE o.id = ${orderId}::uuid AND o.status <> 'cancelled'
+    LIMIT 1
+  `;
+  const allocatedSqft = Number(areaRows[0]?.allocated_sqft ?? 0);
+  if (!Number.isFinite(allocatedSqft) || allocatedSqft <= 0) {
+    throw new Error("Record the allocated area in sq.ft before assigning this subcontractor.");
+  }
+  const agreedAmount = Math.round(allocatedSqft * rate * 100) / 100;
+  if (!Number.isFinite(agreedAmount) || agreedAmount > 999999999999) {
+    throw new Error("Subcontract amount exceeds the supported range.");
   }
 
   const existing = await sql`
@@ -346,8 +372,8 @@ export async function assignWorkerToOrder(formData: FormData) {
       ${workerId}::uuid,
       ${clean(formData.get("role_on_job"))},
       ${paymentMode},
-      ${nonNegativeNumber(formData.get("agreed_rate"))},
-      ${nonNegativeNumber(formData.get("agreed_amount"))},
+      ${rate},
+      ${agreedAmount},
       CURRENT_DATE,
       ${clean(formData.get("notes"))},
       ${currentUser.id}
@@ -372,7 +398,7 @@ export async function assignWorkerToOrder(formData: FormData) {
     orderId,
     "worker_assigned",
     `${workerName} assigned to the order${locationId ? " location" : ""}.`,
-    { worker_id: workerId, order_location_id: locationId }
+    { worker_id: workerId, order_location_id: locationId, allocated_sqft: allocatedSqft, rate_per_sqft: rate, agreed_amount: agreedAmount }
   );
 
   revalidatePath("/admin/orders");
