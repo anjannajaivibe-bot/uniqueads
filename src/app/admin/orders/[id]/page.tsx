@@ -81,7 +81,7 @@ export default async function OrderDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireRoles(ACCESS.operations);
+  const currentUser = await requireRoles(ACCESS.operations);
   const { id } = await params;
 
   const [order, locations, assignments, activity, supervisors, workers] =
@@ -132,7 +132,7 @@ export default async function OrderDetailPage({
         action={
           <div className="header-actions">
             <Link href={`/admin/reports/work-photos?order=${o.id}`} className="button button-secondary">GPS Photo Report</Link>
-            <Link href={`/admin/finance/collections?order=${o.id}`} className="button button-secondary">Company Collections (Accounts)</Link>
+            {currentUser.role === "super_admin" ? <Link href={`/admin/finance/collections?order=${o.id}`} className="button button-secondary">Company Collections</Link> : null}
             <Link href="/admin/orders" className="button button-secondary">
               Back to Orders
             </Link>
