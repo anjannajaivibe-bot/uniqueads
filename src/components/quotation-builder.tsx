@@ -12,18 +12,6 @@ type Customer = {
   state: string | null;
 };
 
-type Lead = {
-  id: string;
-  lead_no: string;
-  customer_id: string | null;
-  company_name: string | null;
-  contact_person: string;
-  phone: string;
-  location: string | null;
-  advertising_type: string | null;
-  status: string;
-};
-
 type Item = {
   id: string;
   description: string;
@@ -42,24 +30,18 @@ function currency(value: number) {
 
 export function QuotationBuilder({
   customers,
-  leads,
-  initialLeadId = "",
   initialCustomerId = "",
   defaultValidUntil,
   defaultTermsAndConditions = "",
 }: {
   customers: Customer[];
-  leads: Lead[];
-  initialLeadId?: string;
   initialCustomerId?: string;
   defaultValidUntil: string;
   defaultTermsAndConditions?: string;
 }) {
-  const initialLead = leads.find((lead) => lead.id === initialLeadId);
   const [customerId, setCustomerId] = useState(
-    initialCustomerId || initialLead?.customer_id || ""
+    initialCustomerId || ""
   );
-  const [leadId, setLeadId] = useState(initialLeadId);
   const [items, setItems] = useState<Item[]>([
     {
       id: crypto.randomUUID(),
@@ -72,7 +54,6 @@ export function QuotationBuilder({
   const [discount, setDiscount] = useState(0);
   const [taxMode, setTaxMode] = useState("none");
 
-  const selectedLead = leads.find((lead) => lead.id === leadId);
 
   const totals = useMemo(() => {
     const subtotal = items.reduce(
@@ -127,7 +108,7 @@ export function QuotationBuilder({
         <div className="form-section-title">
           <div>
             <h2>Client & Reference</h2>
-            <p>Select an existing customer or link the quotation to a lead.</p>
+            <p>Select an existing customer for this quotation.</p>
           </div>
         </div>
 
@@ -136,35 +117,15 @@ export function QuotationBuilder({
             <span>Customer</span>
             <select
               name="customer_id"
+              required
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
             >
-              <option value="">No customer selected</option>
+              <option value="">Select customer</option>
               {customers.map((customer) => (
                 <option key={customer.id} value={customer.id}>
                   {customer.company_name}
                   {customer.customer_code ? ` · ${customer.customer_code}` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>Lead</span>
-            <select
-              name="lead_id"
-              value={leadId}
-              onChange={(e) => {
-                const value = e.target.value;
-                setLeadId(value);
-                const lead = leads.find((item) => item.id === value);
-                if (lead?.customer_id) setCustomerId(lead.customer_id);
-              }}
-            >
-              <option value="">No lead selected</option>
-              {leads.map((lead) => (
-                <option key={lead.id} value={lead.id}>
-                  {lead.lead_no} · {lead.company_name || lead.contact_person}
                 </option>
               ))}
             </select>
@@ -188,26 +149,11 @@ export function QuotationBuilder({
             </select>
           </label>
 
-          {selectedLead ? (
-            <div className="quote-lead-preview full">
-              <strong>{selectedLead.company_name || selectedLead.contact_person}</strong>
-              <span>
-                {selectedLead.contact_person} · {selectedLead.phone}
-                {selectedLead.location ? ` · ${selectedLead.location}` : ""}
-              </span>
-            </div>
-          ) : null}
-
           <label className="full">
             <span>Scope of Work</span>
             <textarea
               name="scope_of_work"
               rows={4}
-              defaultValue={
-                selectedLead?.advertising_type
-                  ? `${selectedLead.advertising_type}${selectedLead.location ? ` - ${selectedLead.location}` : ""}`
-                  : ""
-              }
               placeholder="Describe campaign scope, locations, specifications and deliverables."
             />
           </label>
