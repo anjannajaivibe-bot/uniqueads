@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PageHeader, StatCard } from "@/components/ui";
 import { OrdersTable } from "@/components/orders-table";
 import { getOrderCounts, getOrderList } from "@/lib/order-queries";
@@ -27,8 +28,9 @@ export default async function OrdersPage() {
   return (
     <>
       <PageHeader
-        title="Orders"
-        description="Plan confirmed campaigns, locations, teams and execution deadlines."
+        title="Work Orders"
+        description="Record work orders directly, assign locations and teams, and track execution." 
+        action={<Link href="/admin/orders/new" className="button button-primary">+ New Work Order</Link>}
       />
 
       <div className="lead-stats">
