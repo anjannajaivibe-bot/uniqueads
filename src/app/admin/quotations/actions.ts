@@ -93,22 +93,13 @@ async function logActivity(
 export async function createQuotation(formData: FormData) {
   const currentUser = await requireRoles(ACCESS.operations);
 
-  const leadId = clean(formData.get("lead_id"));
-  let customerId = clean(formData.get("customer_id"));
+  const customerId = clean(formData.get("customer_id"));
+  if (!customerId) throw new Error("Select a customer.");
 
-  if (!leadId && !customerId) {
-    throw new Error("Select a customer or a lead.");
-  }
-
-  if (leadId && !customerId) {
-    const leadRows = await sql`
-      SELECT customer_id
-      FROM leads
-      WHERE id = ${leadId}::uuid
-      LIMIT 1
-    `;
-    customerId = leadRows[0]?.customer_id ? String(leadRows[0].customer_id) : null;
-  }
+  const customerRows = await sql`
+    SELECT id FROM customers WHERE id = ${customerId}::uuid AND is_active = true LIMIT 1
+  `;
+  if (customerRows.length === 0) throw new Error("Customer not found or inactive.");
 
   const items = parseItems(clean(formData.get("items_json")));
   const discountAmount = money(clean(formData.get("discount_amount")));
@@ -161,7 +152,7 @@ export async function createQuotation(formData: FormData) {
       created_by
     ) VALUES (
       ${quotationNo},
-      ${leadId},
+      NULL,
       ${customerId},
       CURRENT_DATE,
       ${clean(formData.get("valid_until"))},
@@ -231,30 +222,7 @@ export async function createQuotation(formData: FormData) {
     { quotation_no: quotationNo, grand_total: grandTotal }
   );
 
-  if (leadId) {
-    await sql`
-      UPDATE leads
-      SET
-        status = CASE
-          WHEN status IN ('won', 'lost') THEN status
-          ELSE 'quotation_sent'
-        END,
-        updated_at = now()
-      WHERE id = ${leadId}::uuid
-    `;
-
-    await logActivity(
-      currentUser.id,
-      "lead",
-      leadId,
-      "quotation_created",
-      `Quotation ${quotationNo} created for this lead.`,
-      { quotation_id: quotationId, quotation_no: quotationNo }
-    );
-  }
-
   revalidatePath("/admin");
-  revalidatePath("/admin/leads");
   revalidatePath("/admin/quotations");
   redirect(`/admin/quotations/${quotationId}`);
 }
