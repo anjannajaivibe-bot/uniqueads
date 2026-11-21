@@ -131,6 +131,7 @@ export default async function OrderDetailPage({
         description={`${o.company_name} · ${o.campaign_name}`}
         action={
           <div className="header-actions">
+            <Link href={`/admin/reports/work-photos?order=${o.id}`} className="button button-secondary">GPS Photo Report</Link>
             <Link href={`/admin/finance/collections?order=${o.id}`} className="button button-secondary">Company Collections (Accounts)</Link>
             <Link href="/admin/orders" className="button button-secondary">
               Back to Orders
