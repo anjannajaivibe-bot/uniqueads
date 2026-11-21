@@ -3,6 +3,12 @@ import { sql } from "@/lib/db";
 export async function getFinanceSummary() {
   const rows = await sql`
     SELECT
+      COALESCE((SELECT sum(p.amount) FROM customer_payments p
+        JOIN orders o ON o.id=p.order_id WHERE o.status <> 'cancelled'),0) AS company_collected,
+      COALESCE((SELECT sum(o.total_order_amount - COALESCE((SELECT sum(p.amount) FROM customer_payments p WHERE p.order_id=o.id),0))
+        FROM orders o WHERE o.status <> 'cancelled'),0) AS company_outstanding,
+      COALESCE((SELECT sum(total_order_amount) FROM orders WHERE entity_code='unique_ads' AND status <> 'cancelled'),0) AS unique_ads_order_value,
+      COALESCE((SELECT sum(total_order_amount) FROM orders WHERE entity_code='unique_advertisers' AND status <> 'cancelled'),0) AS unique_advertisers_order_value,
       COALESCE((
         SELECT sum(total_amount)
         FROM invoices
