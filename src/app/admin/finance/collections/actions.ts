@@ -15,7 +15,7 @@ export async function recordCompanyReceipt(form: FormData) {
   const date = String(form.get("payment_date") ?? "").trim() || null;
   const notes = String(form.get("notes") ?? "").trim() || null;
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(orderId)) throw new Error("Select a valid work order.");
-  if (!Number.isFinite(amount) || amount <= 0 || amount > 999999999999 || Math.round(amount * 100) !== amount * 100) {
+  if (!/^\d+(?:\.\d{1,2})?$/.test(amountRaw) || !Number.isFinite(amount) || amount <= 0 || amount > 999999999999) {
     throw new Error("Enter a positive receipt amount with at most two decimal places.");
   }
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Invalid receipt date.");
