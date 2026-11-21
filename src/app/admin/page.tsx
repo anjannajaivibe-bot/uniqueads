@@ -37,7 +37,6 @@ export default async function DashboardPage() {
     );
   }
 
-  const canSales = roleAllowed(currentUser.role, ACCESS.sales);
   const canField = roleAllowed(currentUser.role, ACCESS.field);
   const canFinance = roleAllowed(currentUser.role, ACCESS.finance);
   const canCommercial =
@@ -56,18 +55,11 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="Dashboard" description="Live operating picture across sales, field execution and collections." />
+      <PageHeader title="Dashboard" description="Work orders, field execution, customer collections and operating costs." />
       <section className="stats-grid">
-        {canSales ? (
-          <>
-            <StatCard label="Open Leads" value={number(m.open_leads)} note="Needs follow-up" />
-            <StatCard label="Pending Quotations" value={number(m.pending_quotations)} note="Draft or sent" />
-          </>
-        ) : null}
-
         {canField ? (
           <>
-            <StatCard label="Active Orders" value={number(m.active_orders)} note="Currently executing" />
+            <StatCard label="Active Work Orders" value={number(m.active_orders)} note="Currently executing" />
             <StatCard
               label="Location Completion"
               value={`${completion}%`}
@@ -92,7 +84,7 @@ export default async function DashboardPage() {
       {canField ? (
         <section className="panel">
           <div className="panel-head">
-            <div><h2>Recent Orders</h2><p>Latest confirmed campaigns and execution status.</p></div>
+            <div><h2>Recent Work Orders</h2><p>Latest confirmed campaigns and execution status.</p></div>
             <Link href="/admin/orders" className="text-link">View all</Link>
           </div>
           <div className="table-wrap">

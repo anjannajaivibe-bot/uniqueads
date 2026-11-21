@@ -74,7 +74,6 @@ export default async function CustomerDetailPage({
     quotations,
     invoices,
     payments,
-    leads,
     activity,
   ] = await Promise.all([
     getCustomerById(id),
@@ -114,11 +113,11 @@ export default async function CustomerDetailPage({
             <Link href="/admin/customers" className="button button-secondary">
               Back to Customers
             </Link>
-            <Link
-              href={`/admin/quotations/new?customer=${c.id}`}
-              className="button button-primary"
-            >
-              + New Quotation
+            <Link href={`/admin/orders/new?customer=${c.id}`} className="button button-primary">
+              + New Work Order
+            </Link>
+            <Link href={`/admin/quotations/new?customer=${c.id}`} className="button button-secondary">
+              + Quotation
             </Link>
             {c.phone ? (
               <a href={`tel:${String(c.phone).replace(/\s/g, "")}`} className="button button-secondary">
@@ -155,7 +154,7 @@ export default async function CustomerDetailPage({
 
         <div className="customer-kpis">
           <div><span>Order Value</span><strong>{currency(orderValue)}</strong></div>
-          <div><span>Orders</span><strong>{orders.length}</strong></div>
+          <div><span>Work Orders</span><strong>{orders.length}</strong></div>
           <div><span>Quotations</span><strong>{quotations.length}</strong></div>
           <div><span>Invoices</span><strong>{invoices.length}</strong></div>
         </div>
@@ -369,27 +368,7 @@ export default async function CustomerDetailPage({
             </div>
           </article>
 
-          {leads.length > 0 ? (
-            <article className="panel">
-              <div className="panel-head">
-                <div>
-                  <h2>Lead History</h2>
-                  <p>Original enquiries converted into this customer account.</p>
-                </div>
-              </div>
-              <div className="customer-mini-list">
-                {leads.map((row: any) => (
-                  <Link href={`/admin/leads/${row.id}`} key={row.id} className="customer-mini-row">
-                    <div>
-                      <strong>{row.lead_no}</strong>
-                      <span>{row.advertising_type || "Advertising enquiry"} · {row.location || "Location not set"}</span>
-                    </div>
-                    <span className={`status status-${row.status}`}>{label(row.status)}</span>
-                  </Link>
-                ))}
-              </div>
-            </article>
-          ) : null}
+
         </section>
 
         <aside className="customer-side-column">

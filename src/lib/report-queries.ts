@@ -8,15 +8,6 @@ export type ReportRange = {
 export async function getExecutiveReport(range: ReportRange) {
   const rows = await sql`
     SELECT
-      (SELECT count(*) FROM leads
-        WHERE created_at::date BETWEEN ${range.from}::date AND ${range.to}::date
-      )::int AS leads_created,
-
-      (SELECT count(*) FROM leads
-        WHERE status = 'won'
-          AND updated_at::date BETWEEN ${range.from}::date AND ${range.to}::date
-      )::int AS leads_won,
-
       COALESCE((
         SELECT sum(grand_total)
         FROM quotations
@@ -75,24 +66,13 @@ export async function getExecutiveReport(range: ReportRange) {
   return rows[0];
 }
 
-export async function getSalesFunnel(range: ReportRange) {
+export async function getOrderStatusBreakdown(range: ReportRange) {
   return sql`
-    SELECT
-      status,
-      count(*)::int AS count
-    FROM leads
+    SELECT status, count(*)::int AS count
+    FROM orders
     WHERE created_at::date BETWEEN ${range.from}::date AND ${range.to}::date
     GROUP BY status
-    ORDER BY CASE status
-      WHEN 'new' THEN 1
-      WHEN 'contacted' THEN 2
-      WHEN 'requirement_received' THEN 3
-      WHEN 'quotation_sent' THEN 4
-      WHEN 'negotiation' THEN 5
-      WHEN 'won' THEN 6
-      WHEN 'lost' THEN 7
-      ELSE 8
-    END
+    ORDER BY count DESC, status
   `;
 }
 

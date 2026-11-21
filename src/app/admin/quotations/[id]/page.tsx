@@ -48,9 +48,7 @@ function dateTime(value: any) {
 function contactName(q: any) {
   return (
     q.company_name ||
-    q.lead_company_name ||
     q.customer_contact_person ||
-    q.lead_contact_person ||
     "Customer"
   );
 }
@@ -59,8 +57,6 @@ function whatsappHref(q: any) {
   const raw =
     q.customer_whatsapp ||
     q.customer_phone ||
-    q.lead_whatsapp ||
-    q.lead_phone ||
     "";
   const digits = String(raw).replace(/\D/g, "");
   if (!digits) return null;
@@ -139,7 +135,6 @@ export default async function QuotationDetailPage({
 
             <div className="quote-reference-grid">
               <div><span>Quotation Date</span><strong>{date(q.quotation_date)}</strong></div>
-              <div><span>Lead</span><strong>{q.lead_no || "Not linked"}</strong></div>
               <div><span>Customer Code</span><strong>{q.customer_code || "Not converted"}</strong></div>
               <div><span>Created By</span><strong>{q.created_by_name || "System"}</strong></div>
             </div>
@@ -285,7 +280,7 @@ export default async function QuotationDetailPage({
                     <span>Advertising Type</span>
                     <input
                       name="advertising_type"
-                      defaultValue={q.lead_advertising_type || ""}
+                      defaultValue={q.scope_of_work || ""}
                       placeholder="Wall Painting / Hoardings..."
                     />
                   </label>

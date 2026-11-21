@@ -4,7 +4,6 @@ import { QuotationBuilder } from "@/components/quotation-builder";
 import {
   getCompanySettings,
   getQuotationCustomers,
-  getQuotationLeads,
 } from "@/lib/quotation-queries";
 
 export const dynamic = "force-dynamic";
@@ -12,12 +11,11 @@ export const dynamic = "force-dynamic";
 export default async function NewQuotationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ lead?: string; customer?: string }>;
+  searchParams: Promise<{ customer?: string }>;
 }) {
   const params = await searchParams;
-  const [customers, leads, companySettings] = await Promise.all([
+  const [customers, companySettings] = await Promise.all([
     getQuotationCustomers(),
-    getQuotationLeads(),
     getCompanySettings(),
   ]);
 
@@ -39,8 +37,6 @@ export default async function NewQuotationPage({
 
       <QuotationBuilder
         customers={customers as any}
-        leads={leads as any}
-        initialLeadId={params.lead || ""}
         initialCustomerId={params.customer || ""}
         defaultValidUntil={defaultValidUntil}
         defaultTermsAndConditions={(companySettings as any)?.quotation_terms || ""}

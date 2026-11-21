@@ -12,7 +12,6 @@ type Row = {
   status: string;
   grand_total: string | number;
   company_name: string | null;
-  lead_no: string | null;
   contact_person: string | null;
   phone: string | null;
 };
@@ -55,7 +54,6 @@ export function QuotationsTable({ rows }: { rows: Row[] }) {
       const haystack = [
         row.quotation_no,
         row.company_name,
-        row.lead_no,
         row.contact_person,
         row.phone,
       ]
@@ -90,7 +88,7 @@ export function QuotationsTable({ rows }: { rows: Row[] }) {
             id="quotation-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Quotation no, customer, lead, phone..."
+            placeholder="Quotation number, customer or phone..."
           />
         </div>
         <label>
@@ -116,7 +114,7 @@ export function QuotationsTable({ rows }: { rows: Row[] }) {
           <thead>
             <tr>
               <th>Quotation</th>
-              <th>Customer / Lead</th>
+              <th>Customer</th>
               <th>Date</th>
               <th>Valid Until</th>
               <th>Status</th>
@@ -140,10 +138,7 @@ export function QuotationsTable({ rows }: { rows: Row[] }) {
                     </Link>
                   </td>
                   <td>
-                    <strong>{row.company_name || row.contact_person || "Lead"}</strong>
-                    {row.lead_no ? (
-                      <div className="table-subtext">{row.lead_no}</div>
-                    ) : null}
+                    <strong>{row.company_name || row.contact_person || "Customer"}</strong>
                   </td>
                   <td>{date(row.quotation_date)}</td>
                   <td>{date(row.valid_until)}</td>

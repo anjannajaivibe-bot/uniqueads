@@ -7,7 +7,7 @@ import {
   getMonthlyPerformance,
   getOrderProfitabilityReport,
   getOverdueInvoicesReport,
-  getSalesFunnel,
+  getOrderStatusBreakdown,
   getStatePerformance,
   getWorkerPaymentReport,
 } from "@/lib/report-queries";
@@ -62,7 +62,7 @@ export default async function ReportsPage({
 
   const [
     executive,
-    funnel,
+    orderStatuses,
     monthly,
     expenses,
     outstanding,
@@ -72,7 +72,7 @@ export default async function ReportsPage({
     overdueInvoices,
   ] = await Promise.all([
     getExecutiveReport(range),
-    getSalesFunnel(range),
+    getOrderStatusBreakdown(range),
     getMonthlyPerformance(),
     getExpenseBreakdown(range),
     getCustomerOutstandingReport(),
@@ -83,9 +83,6 @@ export default async function ReportsPage({
   ]);
 
   const e = executive as any;
-  const leadsCreated = Number(e.leads_created || 0);
-  const leadsWon = Number(e.leads_won || 0);
-  const conversion = leadsCreated > 0 ? (leadsWon / leadsCreated) * 100 : 0;
   const orderValue = Number(e.order_value || 0);
   const expensesValue = Number(e.expense_value || 0);
   const workerValue = Number(e.worker_payment_value || 0);
@@ -94,7 +91,7 @@ export default async function ReportsPage({
 
   const funnelMax = Math.max(
     1,
-    ...funnel.map((row: any) => Number(row.count || 0))
+    ...orderStatuses.map((row: any) => Number(row.count || 0))
   );
 
   const monthlyMax = Math.max(
@@ -139,8 +136,6 @@ export default async function ReportsPage({
       </section>
 
       <div className="report-kpi-grid">
-        <StatCard label="Leads Created" value={leadsCreated} />
-        <StatCard label="Leads Won" value={leadsWon} note={`${conversion.toFixed(1)}% conversion`} />
         <StatCard label="Quotation Value" value={currency(e.quotation_value)} />
         <StatCard label="Order Value" value={currency(orderValue)} />
         <StatCard label="Invoiced" value={currency(e.invoiced_value)} />
@@ -157,15 +152,15 @@ export default async function ReportsPage({
         <section className="panel report-chart-card">
           <div className="panel-head">
             <div>
-              <h2>Sales Funnel</h2>
-              <p>Lead movement during the selected period.</p>
+              <h2>Work Order Status</h2>
+              <p>Work orders created during the selected period.</p>
             </div>
           </div>
           <div className="report-bar-list">
-            {funnel.length === 0 ? (
-              <div className="empty-state">No lead activity in this period.</div>
+            {orderStatuses.length === 0 ? (
+              <div className="empty-state">No work orders created in this period.</div>
             ) : (
-              funnel.map((row: any) => {
+              orderStatuses.map((row: any) => {
                 const count = Number(row.count || 0);
                 return (
                   <div className="report-bar-row" key={row.status}>
