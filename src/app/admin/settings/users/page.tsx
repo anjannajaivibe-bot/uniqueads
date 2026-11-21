@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 const roleLabel: Record<string, string> = {
   super_admin: "Super Admin",
   operations_manager: "Operations Manager",
-  supervisor: "Supervisor / Field Team",
-  sales: "Sales",
+  supervisor: "Subcontractor / Field Team",
+  sales: "Legacy User",
   accounts: "Accounts",
 };
 
@@ -62,7 +62,7 @@ export default async function UsersAccessPage({
         </p>
         <h1 style={{ margin: "5px 0" }}>Users & Access</h1>
         <p style={{ margin: 0, color: "#667085" }}>
-          Create team credentials, assign roles and reset access.
+          Create individual logins for subcontractors and office staff. Link each subcontractor login to its subcontractor profile.
         </p>
       </div>
 
@@ -96,7 +96,7 @@ export default async function UsersAccessPage({
         borderRadius: 14,
         padding: 20,
       }}>
-        <h2 style={{ marginTop: 0 }}>Create Team Login</h2>
+        <h2 style={{ marginTop: 0 }}>Create Subcontractor / Staff Login</h2>
 
         <form
           method="post"
@@ -134,8 +134,7 @@ export default async function UsersAccessPage({
             <div>Role</div>
             <select name="role" required style={{ width: "100%" }}>
               <option value="operations_manager">Operations Manager</option>
-              <option value="supervisor">Supervisor / Field Team</option>
-              <option value="sales">Sales</option>
+              <option value="supervisor">Subcontractor / Field Team</option>
               <option value="accounts">Accounts</option>
               <option value="super_admin">Super Admin</option>
             </select>
@@ -161,7 +160,7 @@ export default async function UsersAccessPage({
           </label>
 
           <label>
-            <div>Link to Worker, optional</div>
+            <div>Link Subcontractor Profile (required for subcontractor login)</div>
             <select name="worker_id" style={{ width: "100%" }}>
               <option value="">Not linked</option>
               {workers.map((worker: any) => (
