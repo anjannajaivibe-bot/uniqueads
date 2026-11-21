@@ -2,6 +2,7 @@ import { ACCESS, requireRoles } from "@/lib/auth/permissions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader, Status } from "@/components/ui";
+import { sql } from "@/lib/db";
 import {
   getActiveWorkers,
   getOrderActivity,
@@ -95,6 +96,9 @@ export default async function OrderDetailPage({
 
   if (!order) notFound();
   const o = order as any;
+  const receiptRows = await sql`SELECT COALESCE(sum(amount),0) AS paid FROM customer_payments WHERE order_id = ${id}::uuid`;
+  const received = Number(receiptRows[0]?.paid || 0);
+  const balance = Math.max(0, Number(o.total_order_amount) - received);
 
   const locationCount = locations.length;
   const completedLocations = locations.filter(
@@ -125,6 +129,7 @@ export default async function OrderDetailPage({
         description={`${o.company_name} · ${o.campaign_name}`}
         action={
           <div className="header-actions">
+            <Link href={`/admin/finance/collections?order=${o.id}`} className="button button-secondary">Company Collections (Accounts)</Link>
             <Link href="/admin/orders" className="button button-secondary">
               Back to Orders
             </Link>
@@ -163,7 +168,7 @@ export default async function OrderDetailPage({
           <div className="order-value-block">
             <span>Order Value</span>
             <strong>{currency(o.total_order_amount)}</strong>
-            <small>Advance: {currency(o.advance_received)}</small>
+            <small>Received: {currency(received)} · Outstanding: {currency(balance)}</small>
           </div>
         </div>
 
@@ -179,7 +184,12 @@ export default async function OrderDetailPage({
         </div>
 
         <div className="lead-facts order-facts">
-          <div><span>Customer</span><strong>{o.company_name}</strong></div>
+          <div><span>Customer Company</span><strong>{o.company_name}</strong></div>
+          <div><span>Receiving Entity</span><strong>{o.entity_code === "unique_advertisers" ? "Unique Advertisers" : "Unique Ads"}</strong></div>
+          <div><span>Company Work Order No.</span><strong>{o.client_work_order_no || "Legacy / not recorded"}</strong></div>
+          <div><span>Company Invoice No.</span><strong>{o.client_invoice_no || "Not provided"}</strong></div>
+          <div><span>Contract Area</span><strong>{o.contract_area_sqft ? `${Number(o.contract_area_sqft).toLocaleString("en-IN")} sq.ft` : "Not recorded"}</strong></div>
+          <div><span>Company Rate / sq.ft</span><strong>{o.client_rate_per_sqft !== null ? currency(o.client_rate_per_sqft) : "Not recorded"}</strong></div>
           <div><span>Advertising Type</span><strong>{o.advertising_type || "Not set"}</strong></div>
           <div><span>Start Date</span><strong>{date(o.start_date)}</strong></div>
           <div><span>Due Date</span><strong className={overdue ? "followup-overdue" : ""}>{date(o.due_date)}</strong></div>
@@ -359,6 +369,7 @@ export default async function OrderDetailPage({
                         <div><span>Quantity</span><strong>{location.quantity}</strong></div>
                         <div><span>Workers</span><strong>{location.worker_count}</strong></div>
                         <div><span>Client Approved</span><strong>{location.client_approved ? "Yes" : "No"}</strong></div>
+                        <div><span>Unique Ads Verified</span><strong>{location.verified_at ? dateTime(location.verified_at) : location.status === "quality_check" ? "Awaiting review" : "Not verified"}</strong></div>
                         <div><span>Completed</span><strong>{date(location.completed_date)}</strong></div>
                       </div>
 
@@ -373,7 +384,7 @@ export default async function OrderDetailPage({
                               <option value="assigned">Assigned</option>
                               <option value="in_progress">In Progress</option>
                               <option value="quality_check">Quality Check</option>
-                              <option value="completed">Completed</option>
+                              <option value="completed">Verified Complete (requires live GPS photo)</option>
                               <option value="blocked">Blocked</option>
                               <option value="cancelled">Cancelled</option>
                             </select>
@@ -420,23 +431,23 @@ export default async function OrderDetailPage({
           <article className="form-card">
             <div className="form-section-title">
               <div>
-                <h2>Worker Assignment</h2>
-                <p>Assign a painter, helper, supervisor or installation worker to the order or a specific location.</p>
+                <h2>Subcontractor Work Allocation</h2>
+                <p>Allocate the whole work order or individual wall locations. Each subcontractor needs a linked ERP login.</p>
               </div>
             </div>
 
             {workers.length === 0 ? (
               <div className="empty-state">
-                No active workers exist yet. Add workers from the Workers module before assigning field teams.
+                No active subcontractors exist yet. Add a subcontractor and create a linked login in Settings → Users & Access.
               </div>
             ) : (
               <form action={assignWorkerToOrder}>
                 <input type="hidden" name="order_id" value={o.id} />
                 <div className="form-grid">
                   <label>
-                    <span>Worker *</span>
+                    <span>Subcontractor / Field Team *</span>
                     <select name="worker_id" required defaultValue="">
-                      <option value="">Select worker</option>
+                      <option value="">Select subcontractor</option>
                       {workers.map((worker: any) => (
                         <option key={worker.id} value={worker.id}>
                           {worker.name} · {label(worker.skill)}
@@ -462,7 +473,7 @@ export default async function OrderDetailPage({
                   <label>
                     <span>Payment Mode</span>
                     <select name="agreed_payment_mode" defaultValue="">
-                      <option value="">Use worker default</option>
+                      <option value="">Use subcontractor default</option>
                       <option value="daily">Daily</option>
                       <option value="per_wall">Per Wall</option>
                       <option value="per_sqft">Per sq.ft</option>
@@ -471,11 +482,11 @@ export default async function OrderDetailPage({
                     </select>
                   </label>
                   <label>
-                    <span>Agreed Rate</span>
+                    <span>Agreed Subcontract Rate (₹)</span>
                     <input name="agreed_rate" type="number" min="0" step="0.01" />
                   </label>
                   <label>
-                    <span>Agreed Total Amount</span>
+                    <span>Subcontract Work Value (₹)</span>
                     <input name="agreed_amount" type="number" min="0" step="0.01" />
                   </label>
                   <label className="full">
@@ -485,7 +496,7 @@ export default async function OrderDetailPage({
                 </div>
                 <div className="form-actions">
                   <button className="button button-primary" type="submit">
-                    Assign Worker
+                    Allocate Work
                   </button>
                 </div>
               </form>
