@@ -471,24 +471,17 @@ export default async function OrderDetailPage({
                     <input name="role_on_job" placeholder="Painter / helper / team lead..." />
                   </label>
                   <label>
-                    <span>Payment Mode</span>
-                    <select name="agreed_payment_mode" defaultValue="">
-                      <option value="">Use subcontractor default</option>
-                      <option value="daily">Daily</option>
-                      <option value="per_wall">Per Wall</option>
-                      <option value="per_sqft">Per sq.ft</option>
-                      <option value="fixed">Fixed</option>
-                      <option value="milestone">Milestone</option>
-                    </select>
+                    <span>Payment Basis</span>
+                    <input value="Per sq.ft (required)" readOnly aria-label="Payment basis" />
                   </label>
                   <label>
-                    <span>Agreed Subcontract Rate (₹)</span>
-                    <input name="agreed_rate" type="number" min="0" step="0.01" />
+                    <span>Agreed Subcontract Rate / sq.ft (₹) *</span>
+                    <input name="agreed_rate" type="number" min="0" step="0.01" required />
                   </label>
-                  <label>
-                    <span>Subcontract Work Value (₹)</span>
-                    <input name="agreed_amount" type="number" min="0" step="0.01" />
-                  </label>
+                  <p className="full" style={{margin:0}}>
+                    Subcontract value is calculated automatically from the allocated area × rate per sq.ft.
+                    Enter the location area first for location-specific assignments.
+                  </p>
                   <label className="full">
                     <span>Assignment Notes</span>
                     <textarea name="notes" rows={2} />
