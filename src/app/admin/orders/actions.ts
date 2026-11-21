@@ -452,8 +452,8 @@ export async function createWorkOrder(formData: FormData) {
   if (!customerId || !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(customerId)) {
     throw new Error("Select a valid company.");
   }
-  if (!campaignName || !companyWorkOrderNo) {
-    throw new Error("Work description and company work order number are required.");
+  if (!campaignName || (!companyWorkOrderNo && !companyInvoiceNo)) {
+    throw new Error("Work description and either company work order number or invoice reference are required.");
   }
   if (entityCode !== "unique_ads" && entityCode !== "unique_advertisers") {
     throw new Error("Select the receiving business entity.");
@@ -488,7 +488,7 @@ export async function createWorkOrder(formData: FormData) {
     logged AS (
       INSERT INTO activity_logs(actor_user_id,action,entity_type,entity_id,description,metadata)
       SELECT ${actor.id}::uuid, 'order_created','order',co.id,
-        ${'Company work order received: ' + companyWorkOrderNo},
+        ${'Company work received: ' + (companyWorkOrderNo || companyInvoiceNo)},
         jsonb_build_object('entity',${entityCode},'sqft',${area},'rate',${rate},'value',${amount})
       FROM created_order co RETURNING id
     )
