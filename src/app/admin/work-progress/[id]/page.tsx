@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader, Status } from "@/components/ui";
 import { requireAppUser } from "@/lib/auth/authorization";
 import { WorkUpdateForm } from "@/components/work-update-form";
+import { updateOrderLocation } from "@/app/admin/orders/actions";
 import { presignWorkPhotoDownload } from "@/lib/storage";
 import {
   getLocationWorkers,
@@ -120,7 +121,9 @@ export default async function WorkLocationPage({
           <div><span>Planned Date</span><strong>{date(l.planned_date)}</strong></div>
           <div><span>Completed Date</span><strong>{date(l.completed_date)}</strong></div>
           <div><span>Wall Size</span><strong>{l.wall_size || "Not set"}</strong></div>
-          <div><span>Area</span><strong>{l.area_sqft ? `${l.area_sqft} sq.ft` : "Not set"}</strong></div>
+          <div><span>Allocated Area</span><strong>{l.area_sqft ? `${l.area_sqft} sq.ft` : "Not set"}</strong></div>
+          <div><span>Reported Completed</span><strong>{l.completed_area_sqft ? `${l.completed_area_sqft} sq.ft` : "0 sq.ft"}</strong></div>
+          <div><span>Unique Ads Verified</span><strong>{l.verified_at ? dateTime(l.verified_at) : "Not yet verified"}</strong></div>
           <div><span>Quantity</span><strong>{l.quantity}</strong></div>
           <div><span>Client Approved</span><strong>{l.client_approved ? "Yes" : "No"}</strong></div>
           <div><span>Supervisor</span><strong>{l.supervisor_name || "Unassigned"}</strong></div>
@@ -158,6 +161,28 @@ export default async function WorkLocationPage({
               Open Live Photo Capture
             </Link>
           </article>
+
+          {l.status === "quality_check" && ["super_admin","operations_manager"].includes(currentUser.role) ? (
+            <article className="form-card">
+              <div className="form-section-title"><div>
+                <h2>Review & Verify Completion</h2>
+                <p>Review the live GPS completion photo, location, sq.ft and timestamp below before approving this site.</p>
+              </div></div>
+              <form action={updateOrderLocation}>
+                <input type="hidden" name="order_id" value={l.order_id}/>
+                <input type="hidden" name="location_id" value={l.id}/>
+                <input type="hidden" name="status" value="completed"/>
+                <input type="hidden" name="progress_percent" value="100"/>
+                <input type="hidden" name="client_approved" value={l.client_approved ? "true" : "false"}/>
+                <label className="stacked-field"><span>Verification Notes</span>
+                  <textarea name="notes" defaultValue={l.notes || ""} rows={2}/>
+                </label>
+                <div className="form-actions">
+                  <button type="submit" className="button button-primary">Approve Verified Work</button>
+                </div>
+              </form>
+            </article>
+          ) : null}
 
           <article className="panel work-gallery-panel">
             <div className="panel-head">
@@ -203,12 +228,18 @@ export default async function WorkLocationPage({
                               <span>
                                 {dateTime(photo.captured_at || photo.created_at)}
                               </span>
+                              {photo.completed_area_sqft !== null ? <span>Work recorded: {Number(photo.completed_area_sqft).toLocaleString("en-IN")} sq.ft</span> : null}
                               <span>
                                 {photo.uploaded_by_name || "System"}
                                 {photo.latitude && photo.longitude
                                   ? ` · GPS ${photo.latitude}, ${photo.longitude}`
                                   : ""}
                               </span>
+                              {photo.latitude !== null && photo.longitude !== null ? <span>
+                                <a href={`https://www.google.com/maps?q=${photo.latitude},${photo.longitude}`} target="_blank" rel="noreferrer">View GPS Map</a>
+                                {photo.gps_accuracy_m ? ` · Accuracy ±${Math.round(Number(photo.gps_accuracy_m))} m` : ""}
+                              </span> : null}
+                              <span>Saved in ERP: {dateTime(photo.server_received_at || photo.created_at)}</span>
                             </figcaption>
                           </figure>
                         ))}
