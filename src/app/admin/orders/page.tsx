@@ -1,3 +1,4 @@
+import { ACCESS, requireRoles } from "@/lib/auth/permissions";
 import Link from "next/link";
 import { PageHeader, StatCard } from "@/components/ui";
 import { OrdersTable } from "@/components/orders-table";
@@ -14,6 +15,7 @@ function currency(value: unknown) {
 }
 
 export default async function OrdersPage() {
+  await requireRoles(ACCESS.operations);
   const [rows, counts] = await Promise.all([
     getOrderList(),
     getOrderCounts(),
