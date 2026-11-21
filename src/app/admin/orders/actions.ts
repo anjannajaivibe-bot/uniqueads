@@ -22,7 +22,7 @@ function nonNegativeInteger(value: FormDataEntryValue | null) {
   const text = clean(value);
   if (!text) return null;
   const parsed = Number.parseInt(text, 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  return Number.isSafeInteger(parsed) && parsed >= 0 && /^\d+$/.test(text) ? parsed : null;
 }
 
 async function logOrderActivity(
@@ -109,7 +109,7 @@ export async function updateOrderStatus(formData: FormData) {
     throw new Error("Invalid order status.");
   }
 
-  await sql`
+  const updated = await sql`
     UPDATE orders
     SET
       status = ${status},
@@ -122,7 +122,10 @@ export async function updateOrderStatus(formData: FormData) {
       END,
       updated_at = now()
     WHERE id = ${orderId}::uuid
+    RETURNING id
   `;
+
+  if (updated.length === 0) throw new Error("Order not found.");
 
   await logOrderActivity(
     currentUser.id,
@@ -245,9 +248,11 @@ export async function updateOrderLocation(formData: FormData) {
     RETURNING location_name
   `;
 
-  const locationName = rows[0]?.location_name
-    ? String(rows[0].location_name)
-    : "Location";
+  if (rows.length === 0) {
+    throw new Error("Order location not found or does not belong to this order.");
+  }
+
+  const locationName = String(rows[0].location_name);
 
   await logOrderActivity(
     currentUser.id,
@@ -282,6 +287,17 @@ export async function assignWorkerToOrder(formData: FormData) {
 
   if (paymentMode && !allowedModes.includes(paymentMode)) {
     throw new Error("Invalid worker payment mode.");
+  }
+
+  if (locationId) {
+    const validLocation = await sql`
+      SELECT id FROM order_locations
+      WHERE id = ${locationId}::uuid AND order_id = ${orderId}::uuid
+      LIMIT 1
+    `;
+    if (validLocation.length === 0) {
+      throw new Error("Selected location does not belong to this order.");
+    }
   }
 
   const existing = await sql`
