@@ -45,6 +45,7 @@ export default async function LiveCapturePage() {
               from public.order_worker_assignments owa
               where owa.order_id = o.id
                 and owa.worker_id = ${user.worker_id || null}::uuid
+                and (owa.order_location_id = ol.id or owa.order_location_id is null)
                 and owa.released_on is null
             )
           )
