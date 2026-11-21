@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PrintButton } from "@/components/print-button";
+import { sql } from "@/lib/db";
 import { ACCESS, requireRoles } from "@/lib/auth/permissions";
 import {
   getFinanceCompanySettings,
@@ -45,7 +46,12 @@ export default async function InvoicePrintPage({
   if (!invoice) notFound();
 
   const i = invoice as any;
-  const s = settings as any;
+  const profiles = await sql`SELECT * FROM business_entities WHERE code = ${i.entity_code || "unique_ads"} LIMIT 1`;
+  const configured = (profiles[0] || {}) as any;
+  const s = i.entity_code === "unique_advertisers"
+    ? configured
+    : { ...(settings as any), ...Object.fromEntries(Object.entries(configured).filter(([key, value]) => key !== "display_name" && value !== null)) };
+  const issuingName = i.entity_code === "unique_advertisers" ? "Unique Advertisers" : "Unique Ads";
 
   return (
     <main className="print-document-shell">
@@ -59,11 +65,11 @@ export default async function InvoicePrintPage({
       <article className="quotation-document">
         <header className="quotation-document-head">
           <div className="quotation-document-brand">
-            <img src="/unique-ads-logo.png" alt="Unique Ads" />
+            {i.entity_code !== "unique_advertisers" ? <img src="/unique-ads-logo.png" alt="Unique Ads" /> : null}
             <div>
-              <h1>{s?.company_name || "Unique Ads"}</h1>
-              <p>{s?.legal_name || ""}</p>
-              <p>{s?.address || "Outdoor Advertising Operations"}</p>
+              <h1>{s?.legal_name || issuingName}</h1>
+              <p>{s?.legal_name && s.legal_name !== issuingName ? issuingName : ""}</p>
+              <p>{s?.address || ""}</p>
               <p>{[s?.phone, s?.email, s?.website].filter(Boolean).join(" · ")}</p>
               {s?.gstin ? <p>GSTIN: {s.gstin}</p> : null}
               {s?.pan ? <p>PAN: {s.pan}</p> : null}
@@ -93,8 +99,8 @@ export default async function InvoicePrintPage({
             <strong>{date(i.invoice_date)}</strong>
             <span>Due Date</span>
             <strong>{date(i.due_date)}</strong>
-            <span>Order</span>
-            <strong>{i.order_no}</strong>
+            <span>Company Work Order</span>
+            <strong>{i.client_work_order_no || i.order_no}</strong>
           </div>
         </section>
 
@@ -180,8 +186,7 @@ export default async function InvoicePrintPage({
 
         <footer className="quotation-document-footer">
           <div>
-            <strong>{s?.company_name || "Unique Ads"}</strong>
-            <span>Branding That Gets Noticed</span>
+            <strong>{s?.legal_name || issuingName}</strong>
           </div>
           <div className="quotation-signature">
             <span>Authorised Signatory</span>
