@@ -32,7 +32,7 @@ export default async function CompanyCollectionsPage({searchParams}: {
       ) pay ON true
       ORDER BY o.created_at DESC LIMIT 500`,
     sql`SELECT p.id,p.payment_no,p.amount,p.payment_date,p.created_at,p.payment_method,
-        p.reference_no,o.order_no,o.client_work_order_no,o.entity_code,c.company_name,
+        p.reference_no,o.order_no,o.client_work_order_no,o.client_invoice_no,o.entity_code,c.company_name,
         u.full_name AS entered_by
       FROM customer_payments p JOIN orders o ON o.id=p.order_id
       JOIN customers c ON c.id=p.customer_id
@@ -95,7 +95,7 @@ export default async function CompanyCollectionsPage({searchParams}: {
           <th>Receipt / Company WO</th><th>Entity</th><th>Payment Date</th><th>Entered At (IST)</th><th>Entered By</th><th>Reference</th><th className="align-right">Amount</th>
         </tr></thead><tbody>
           {receipts.length===0?<tr><td colSpan={7}>No receipts recorded yet.</td></tr>:receipts.map((r:any)=><tr key={r.id}>
-            <td>{r.payment_no || "-"}<div>{r.client_work_order_no || r.order_no}</div></td>
+            <td>{r.payment_no || "-"}<div>{r.client_work_order_no || r.client_invoice_no || r.order_no}</div></td>
             <td>{r.entity_code==="unique_advertisers" ? "Unique Advertisers":"Unique Ads"}</td>
             <td>{String(r.payment_date).slice(0,10)}</td>
             <td>{stamp(r.created_at)}</td>
