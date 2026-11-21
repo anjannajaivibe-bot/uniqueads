@@ -73,6 +73,11 @@ export async function getInvoiceList() {
       i.total_amount,
       i.amount_paid,
       o.order_no,
+      o.entity_code,
+      o.client_work_order_no,
+      o.client_invoice_no,
+      o.contract_area_sqft,
+      o.client_rate_per_sqft,
       o.campaign_name,
       c.company_name,
       c.phone
@@ -251,7 +256,9 @@ export async function getInvoiceById(id: string) {
     SELECT
       i.*,
       o.order_no,
-      o.campaign_name,
+      o.entity_code,
+      o.client_work_order_no,
+      o.client_invoice_no,
       o.status AS order_status,
       c.company_name,
       c.contact_person,
