@@ -1,3 +1,4 @@
+import { ACCESS, requireRoles } from "@/lib/auth/permissions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader, Status } from "@/components/ui";
@@ -79,6 +80,7 @@ export default async function OrderDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireRoles(ACCESS.operations);
   const { id } = await params;
 
   const [order, locations, assignments, activity, supervisors, workers] =
