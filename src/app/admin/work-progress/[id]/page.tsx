@@ -86,9 +86,9 @@ export default async function WorkLocationPage({
             <Link href="/admin/work-progress" className="button button-secondary">
               Back to Work Progress
             </Link>
-            <Link href={`/admin/orders/${l.order_id}`} className="button button-secondary">
+            {currentUser.role !== "supervisor" ? <Link href={`/admin/orders/${l.order_id}`} className="button button-secondary">
               Open Order
-            </Link>
+            </Link> : null}
           </div>
         }
       />
