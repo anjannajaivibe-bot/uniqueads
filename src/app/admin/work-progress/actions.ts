@@ -50,7 +50,7 @@ export async function addWorkUpdate(formData: FormData) {
   const updateText = clean(formData.get("update_text"));
   const latitude = numberOrNull(formData.get("latitude"));
   const longitude = numberOrNull(formData.get("longitude"));
-  const clientApproved = clean(formData.get("client_approved")) === "true";
+  const clientApproved = currentUser.role !== "supervisor" && clean(formData.get("client_approved")) === "true";
 
   const allowed = [
     "started",
