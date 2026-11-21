@@ -201,6 +201,10 @@ export async function getInvoiceOrderSource(orderId: string) {
     SELECT
       o.id,
       o.order_no,
+      o.entity_code,
+      o.client_work_order_no,
+      o.contract_area_sqft,
+      o.client_rate_per_sqft,
       o.campaign_name,
       o.customer_id,
       o.quotation_id,
