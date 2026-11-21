@@ -159,7 +159,23 @@ export async function addOrderLocation(formData: FormData) {
   const locationName = clean(formData.get("location_name"));
 
   if (!orderId || !locationName) {
-    throw new Error("Order and location name are required.");
+    throw new Error("Work order and location name are required.");
+  }
+  const siteSqft = nonNegativeNumber(formData.get("area_sqft"));
+  if (siteSqft === null || siteSqft <= 0) {
+    throw new Error("Enter the total allocated area for this site in sq.ft.");
+  }
+  const allocated = await sql`
+    SELECT o.contract_area_sqft,
+      COALESCE((SELECT sum(ol.area_sqft) FROM order_locations ol
+        WHERE ol.order_id=o.id AND ol.status <> 'cancelled'),0) AS existing_area
+    FROM orders o WHERE o.id=${orderId}::uuid AND o.status <> 'cancelled'
+    LIMIT 1
+  `;
+  if (!allocated.length) throw new Error("Work order not found or cancelled.");
+  const contractSqft = allocated[0].contract_area_sqft === null ? null : Number(allocated[0].contract_area_sqft);
+  if (contractSqft !== null && Number(allocated[0].existing_area) + siteSqft > contractSqft + 0.001) {
+    throw new Error("New site square feet exceed the remaining contracted work area.");
   }
 
   const rows = await sql`
@@ -191,7 +207,7 @@ export async function addOrderLocation(formData: FormData) {
       ${nonNegativeNumber(formData.get("latitude"))},
       ${nonNegativeNumber(formData.get("longitude"))},
       ${clean(formData.get("wall_size"))},
-      ${nonNegativeNumber(formData.get("area_sqft"))},
+      ${siteSqft},
       ${nonNegativeInteger(formData.get("quantity")) ?? 1},
       ${clean(formData.get("planned_date"))},
       'pending',
