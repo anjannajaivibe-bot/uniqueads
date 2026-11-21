@@ -65,6 +65,7 @@ export async function getWorkProgressOverview(user: CurrentAppUser) {
             FROM order_worker_assignments owa_scope
             WHERE owa_scope.order_id = o.id
               AND owa_scope.worker_id = ${user.worker_id}::uuid
+              AND (owa_scope.order_location_id = ol.id OR owa_scope.order_location_id IS NULL)
               AND owa_scope.released_on IS NULL
           )
         )
@@ -110,6 +111,7 @@ export async function getWorkProgressCounts(user: CurrentAppUser) {
             FROM order_worker_assignments owa_scope
             WHERE owa_scope.order_id = o.id
               AND owa_scope.worker_id = ${user.worker_id}::uuid
+              AND (owa_scope.order_location_id = ol.id OR owa_scope.order_location_id IS NULL)
               AND owa_scope.released_on IS NULL
           )
         )
@@ -147,6 +149,7 @@ export async function getWorkLocation(id: string, user: CurrentAppUser) {
             FROM order_worker_assignments owa_scope
             WHERE owa_scope.order_id = o.id
               AND owa_scope.worker_id = ${user.worker_id}::uuid
+              AND (owa_scope.order_location_id = ol.id OR owa_scope.order_location_id IS NULL)
               AND owa_scope.released_on IS NULL
           )
         )
