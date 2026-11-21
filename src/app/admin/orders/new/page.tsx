@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui";
+import { OrderSqftPricing } from "@/components/order-sqft-pricing";
 import { getQuotationCustomers } from "@/lib/quotation-queries";
 import { createWorkOrder } from "../actions";
 import { requireRoles, ACCESS } from "@/lib/auth/permissions";
@@ -18,7 +19,7 @@ export default async function NewWorkOrderPage({
     <>
       <PageHeader
         title="New Work Order"
-        description="Record confirmed advertising work directly. No lead or quotation is required."
+        description="Record the company work order in sq.ft against Unique Ads or Unique Advertisers."
         action={<Link href="/admin/orders" className="button button-secondary">Back to Work Orders</Link>}
       />
       <form action={createWorkOrder} className="form-card">
@@ -37,6 +38,21 @@ export default async function NewWorkOrderPage({
             <Link className="text-link" href="/admin/customers/new">+ Add Customer</Link>
           </label>
           <label>
+            <span>Receiving Entity *</span>
+            <select name="entity_code" required defaultValue="unique_ads">
+              <option value="unique_ads">Unique Ads</option>
+              <option value="unique_advertisers">Unique Advertisers</option>
+            </select>
+          </label>
+          <label>
+            <span>Company Work Order No. *</span>
+            <input name="client_work_order_no" required maxLength={120} placeholder="Company reference number" />
+          </label>
+          <label>
+            <span>Company Invoice No. (if supplied)</span>
+            <input name="client_invoice_no" maxLength={120} placeholder="Company invoice reference" />
+          </label>
+          <label>
             <span>Campaign / Work Name *</span>
             <input name="campaign_name" placeholder="e.g. Wall painting campaign at Hyderabad" required maxLength={180} />
           </label>
@@ -51,14 +67,8 @@ export default async function NewWorkOrderPage({
               <option value="Other">Other</option>
             </select>
           </label>
-          <label>
-            <span>Work Order Value (₹) *</span>
-            <input type="number" name="total_order_amount" min="0" step="0.01" defaultValue="0" required />
-          </label>
-          <label>
-            <span>Advance Received (₹)</span>
-            <input type="number" name="advance_received" min="0" step="0.01" defaultValue="0" />
-          </label>
+          <OrderSqftPricing />
+
           <label>
             <span>Start Date</span>
             <input type="date" name="start_date" />
@@ -73,7 +83,7 @@ export default async function NewWorkOrderPage({
           </label>
         </div>
         <div className="form-actions">
-          <button type="submit" className="button button-primary">Create Work Order</button>
+          <button type="submit" className="button button-primary">Save Company Work Order</button>
         </div>
       </form>
     </>
