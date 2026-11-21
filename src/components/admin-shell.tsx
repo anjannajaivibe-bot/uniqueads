@@ -18,7 +18,7 @@ function roleAllowed(role: string, allowed: readonly string[]) { return allowed.
 const navigation = [
   { label: "Dashboard", href: "/admin", icon: "▦", roles: null },
   { label: "Customers", href: "/admin/customers", icon: "◉", roles: ACCESS.operations },
-  { label: "Quotations", href: "/admin/quotations", icon: "▤", roles: ACCESS.sales },
+  { label: "Quotations", href: "/admin/quotations", icon: "▤", roles: ACCESS.operations },
   { label: "Work Orders", href: "/admin/orders", icon: "▣", roles: ACCESS.field },
   { label: "Work Progress", href: "/admin/work-progress", icon: "◫", roles: ACCESS.field },
   { label: "Workers", href: "/admin/workers", icon: "◌", roles: ACCESS.field },
