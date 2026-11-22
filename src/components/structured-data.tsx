@@ -12,6 +12,15 @@ const areas = regionNames.map((name) => ({
   containedInPlace: { "@type": "Country", name: "India" },
 }));
 
+const additionalServices = [
+  { id: "high-rise-wall-painting", name: "High-Rise Wall Painting", description: "Large-scale wall painting advertising for suitable high-rise building surfaces." },
+  { id: "unipole-advertising", name: "Unipole Advertising", description: "Elevated single-column outdoor billboard advertising." },
+  { id: "glow-sign-boards", name: "Glow Sign Boards", description: "Illuminated commercial and retail sign boards." },
+  { id: "backlit-flex-boards", name: "Backlit Flex Boards", description: "Illuminated flex advertising panels and lightbox displays." },
+  { id: "non-backlit-flex-boards", name: "Non-Backlit Flex Boards", description: "Printed non-illuminated flex signage and advertising boards." },
+  { id: "embedded-sign-boards", name: "Embedded Sign Boards", description: "Architecturally integrated building and storefront signage." },
+];
+
 const schema = {
   "@context": "https://schema.org",
   "@graph": [
@@ -21,7 +30,7 @@ const schema = {
       name: "Unique Ads",
       url: `${origin}/`,
       description:
-        "Outdoor advertising business offering wall painting advertisements and hoardings across Telangana, Andhra Pradesh and Karnataka.",
+        "Outdoor advertising business offering wall painting, high-rise wall branding, hoardings, unipoles, illuminated signboards, flex displays and embedded signage across Telangana, Andhra Pradesh and Karnataka.",
       logo: {
         "@type": "ImageObject",
         url: `${origin}/unique-ads-logo.png`,
@@ -48,13 +57,14 @@ const schema = {
       "@type": "WebPage",
       "@id": `${origin}/#webpage`,
       url: `${origin}/`,
-      name: "Wall Painting Advertising & Hoardings | Unique Ads",
+      name: "Wall Painting, Hoardings & Sign Boards | Unique Ads",
       isPartOf: { "@id": `${origin}/#website` },
       about: { "@id": company },
       inLanguage: "en-IN",
       mainEntity: [
         { "@id": `${origin}/#wall-painting-service` },
         { "@id": `${origin}/#hoarding-service` },
+        ...additionalServices.map((service) => ({ "@id": `${origin}/#${service.id}` })),
       ],
     },
     {
@@ -79,6 +89,16 @@ const schema = {
       areaServed: areas,
       url: `${origin}/#formats`,
     },
+    ...additionalServices.map((service) => ({
+      "@type": "Service",
+      "@id": `${origin}/#${service.id}`,
+      name: service.name,
+      serviceType: service.name,
+      description: service.description,
+      provider: { "@id": company },
+      areaServed: areas,
+      url: `${origin}/#${service.id}`,
+    })),
   ],
 };
 

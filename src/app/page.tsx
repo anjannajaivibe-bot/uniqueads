@@ -5,13 +5,19 @@ import { StructuredData } from "@/components/structured-data";
 import "./landing.css";
 
 export const metadata: Metadata = {
-  title: "Wall Painting Advertising & Hoardings | Unique Ads",
+  title: "Wall Painting, Hoardings & Sign Boards | Unique Ads",
   description:
-    "Wall painting advertising and outdoor hoardings across Telangana, Andhra Pradesh and Karnataka. Plan your next campaign and request a quote from Unique Ads.",
+    "Outdoor advertising services across Telangana, Andhra Pradesh and Karnataka: wall painting, high-rise wall branding, hoardings, unipoles, glow sign boards, backlit and non-backlit flex boards, and embedded signage.",
   applicationName: "Unique Ads",
   keywords: [
     "wall painting advertising",
     "outdoor hoarding advertising",
+    "high rise wall painting advertising",
+    "unipole advertising",
+    "glow sign boards",
+    "backlit flex boards",
+    "non backlit flex boards",
+    "embedded sign boards",
     "wall advertising Telangana",
     "hoarding advertising Andhra Pradesh",
     "outdoor advertising Karnataka",
@@ -24,9 +30,9 @@ export const metadata: Metadata = {
     locale: "en_IN",
     url: "https://uniqueads.jaivibe.com/",
     siteName: "Unique Ads",
-    title: "Unique Ads | Outdoor Advertising That Gets Seen",
+    title: "Unique Ads | Wall Painting, Hoardings & Signage",
     description:
-      "Wall painting advertising and outdoor hoardings across Telangana, Andhra Pradesh and Karnataka. Let's make your brand visible.",
+      "Wall painting, high-rise branding, unipole advertising, hoardings, illuminated sign boards and flex displays across Telangana, Andhra Pradesh and Karnataka.",
     images: [
       {
         url: "/marketing/editorial-wall-painting.jpg",
@@ -39,9 +45,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Unique Ads | Wall Painting & Outdoor Hoardings",
+    title: "Unique Ads | Outdoor Advertising & Sign Boards",
     description:
-      "Outdoor branding through wall painting advertising and hoardings across Telangana, Andhra Pradesh and Karnataka.",
+      "Outdoor advertising, high-rise wall painting, unipoles and professional sign board solutions across Telangana, Andhra Pradesh and Karnataka.",
     images: ["/marketing/editorial-wall-painting.jpg"],
   },
   robots: {
@@ -56,7 +62,7 @@ const whatsapp = "https://wa.me/919666566532";
 
 const steps = [
   { number: "01", title: "Share your brief", detail: "Tell us about your business, intended audience and campaign locations." },
-  { number: "02", title: "Select the format", detail: "Discuss the right mix of painted walls and outdoor hoardings for your goals." },
+  { number: "02", title: "Select the format", detail: "Choose from wall painting, high-rise branding, hoardings, unipoles and illuminated or non-lit sign boards." },
   { number: "03", title: "Plan the execution", detail: "Confirm the proposed locations, scope and creative requirements." },
   { number: "04", title: "Take it outdoors", detail: "Coordinate the approved execution and review campaign deliverables." },
 ];
@@ -105,7 +111,7 @@ export default function Home() {
           <div className="ua-hero-top"><Eyebrow>WALL PAINTING & OUTDOOR MEDIA</Eyebrow><span>EST. IN THE REAL WORLD</span></div>
           <h1 id="ua-hero-title">Your brand<br />belongs <em>out<br />in the world.</em></h1>
           <div className="ua-hero-lower">
-            <p>We make brands visible beyond the screen, through wall painting advertisements and outdoor hoardings in the places people travel every day.</p>
+            <p>We make brands visible beyond the screen, through wall painting, high-rise branding, hoardings and professionally planned sign boards in the places people travel every day.</p>
             <a href="#contact" className="ua-link-arrow">Start a conversation <Arrow external /></a>
           </div>
           <div className="ua-hero-index"><span>01 / 05</span><span>THE ART OF BEING SEEN</span></div>
@@ -118,7 +124,7 @@ export default function Home() {
 
       <div className="ua-editorial-strip">
         <span>NOT JUST AN ADVERTISEMENT. A PRESENCE.</span>
-        <span>WALL PAINTINGS <b>●</b> HOARDINGS <b>●</b> ON-GROUND VISIBILITY</span>
+        <span>WALL PAINTINGS <b>●</b> HOARDINGS <b>●</b> SIGN BOARDS</span>
       </div>
 
       <section className="ua-about ua-content-width" id="about">
@@ -127,7 +133,7 @@ export default function Home() {
           <h2>Good advertising<br />is <em>worth noticing.</em></h2>
           <div className="ua-about-bottom">
             <p className="ua-about-lead">Some messages are made to disappear with the next swipe. Others become part of the route, the neighbourhood and the everyday view.</p>
-            <p>At Unique Ads, our focus is on tangible, out-of-home advertising. We help businesses explore wall painting campaigns and hoardings that put their message in front of people on the move, across urban and regional markets.</p>
+            <p>At Unique Ads, we work with tangible advertising formats, from street-level and high-rise wall painting to hoardings, unipoles, illuminated shop signs and flex display boards. The right execution starts with understanding your audience, location and the message you want people to notice.</p>
           </div>
         </div>
       </section>
@@ -135,7 +141,7 @@ export default function Home() {
       <section className="ua-formats ua-content-width" id="formats" aria-labelledby="ua-formats-title">
         <div className="ua-section-heading">
           <Eyebrow>02 / WHAT WE DO</Eyebrow>
-          <div><h2 id="ua-formats-title">Made to be seen.<br /><em>Built for the street.</em></h2><p>Different surfaces. One goal: make the message clear and memorable.</p></div>
+          <div><h2 id="ua-formats-title">Made to be seen.<br /><em>Built for the street.</em></h2><p>From roadside walls to elevated billboards and shopfront signage, we help brands choose the right physical format for every location.</p></div>
         </div>
 
         <article className="ua-feature ua-feature-first">
@@ -163,7 +169,43 @@ export default function Home() {
             <a href="#contact" className="ua-link-arrow">Enquire about hoardings <Arrow external /></a>
           </div>
         </article>
-        <p className="ua-visual-disclaimer">The images on this page are illustrative visual concepts. They do not claim to depict Unique Ads projects, actual locations or delivered campaigns.</p>
+        <div className="ua-more-services" aria-labelledby="ua-additional-services-title">
+          <div className="ua-more-services-heading">
+            <div><span className="ua-services-kicker">EXPANDED OUTDOOR & SIGNAGE SERVICES</span>
+              <h3 id="ua-additional-services-title">Beyond the billboard.<br /><em>Every surface matters.</em></h3>
+            </div>
+            <p>High-rise visibility, retail signage and illuminated or non-illuminated display formats. Each project begins with the site dimensions, material requirements and intended viewing conditions.</p>
+          </div>
+          <div className="ua-service-grid">
+            {[
+              { id: "high-rise-wall-painting", number: "03", name: "High-Rise Wall Painting", category: "LARGE-SCALE WALL BRANDING", image: "1292257", alt: "Painters on scaffolding working on a large building wall mural", description: "Make use of prominent building elevations with large-scale painted branding. We review wall dimensions, visibility, surface suitability and safe access before defining the execution scope.", subject: "high-rise wall painting" },
+              { id: "unipole-advertising", number: "04", name: "Unipole Advertising", category: "ELEVATED OUTDOOR MEDIA", image: "16695395", alt: "Elevated outdoor billboard structure viewed against the sky", description: "Single-column, elevated advertising displays for brands seeking a commanding roadside presence. Placement, display size, structural feasibility and permissions are assessed for each location.", subject: "unipole advertising" },
+              { id: "glow-sign-boards", number: "05", name: "Glow Sign Boards", category: "ILLUMINATED BUSINESS SIGNAGE", image: "2482119", alt: "Illuminated commercial shop sign glowing in an urban storefront", description: "Illuminated signage for shops, showrooms and business premises. We discuss dimensions, sign-face materials, lighting options and legibility to suit the building frontage.", subject: "glow sign boards" },
+              { id: "backlit-flex-boards", number: "06", name: "Backlit Flex Boards", category: "ILLUMINATED FLEX DISPLAYS", image: "5401768", alt: "Retail storefront illuminated after dark showing signage and lighting", description: "Lightbox-style flex displays that illuminate printed graphics from behind. An option for storefronts and promotional panels where after-dark readability is important.", subject: "backlit flex boards" },
+              { id: "non-backlit-flex-boards", number: "07", name: "Non-Backlit Flex Boards", category: "PRINTED DISPLAY SIGNAGE", image: "4913828", alt: "Non-illuminated advertising display board in an outdoor urban setting", description: "Printed flex panels for daylight-facing advertisements, shop fascias and short-term campaigns. We plan size, mounting method and artwork readability for the intended placement.", subject: "non-backlit flex boards" },
+              { id: "embedded-sign-boards", number: "08", name: "Embedded Sign Boards", category: "INTEGRATED FACADE SIGNAGE", image: "30364739", alt: "Storefront with architectural sign board integrated into the facade", description: "Integrated sign boards designed to sit neatly within a building fascia or architectural feature. Suitable for businesses that want a clean, coordinated exterior identity.", subject: "embedded sign boards" },
+            ].map((service) => (
+              <article className="ua-service-card" key={service.id} id={service.id}>
+                <figure className="ua-service-card-image">
+                  <img
+                    src={`https://images.pexels.com/photos/${service.image}/pexels-photo-${service.image}.jpeg?auto=compress&cs=tinysrgb&w=960`}
+                    width={960} height={720} alt={service.alt} loading="lazy" decoding="async"
+                  />
+                  <figcaption>{service.number} <span>REFERENCE PHOTOGRAPH</span></figcaption>
+                </figure>
+                <div className="ua-service-card-copy">
+                  <span className="ua-service-category">{service.category}</span>
+                  <h4>{service.name}</h4>
+                  <p>{service.description}</p>
+                  <a href="#contact" className="ua-service-cta" aria-label={`Enquire about ${service.subject}`}>
+                    Discuss this service <Arrow external />
+                  </a>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+        <p className="ua-visual-disclaimer">All service photographs and visual concepts are illustrative references, not photographs of completed Unique Ads projects or confirmed advertising locations.</p>
       </section>
 
       <section className="ua-guide ua-content-width" id="planning-guide" aria-labelledby="ua-guide-title">
@@ -176,17 +218,17 @@ export default function Home() {
           <article>
             <span className="ua-guide-number">01 / WALL ADVERTISING</span>
             <h3>For local, repeat visibility</h3>
-            <p>Wall painting advertisements use suitable wall surfaces to communicate a brand message at street level. Start by identifying neighbourhoods, markets and routes relevant to your customers. Check the wall's condition, permission to use it and visibility before selecting a location.</p>
+            <p>Wall painting advertisements use suitable wall surfaces to communicate a brand message at street level. Start by identifying neighbourhoods, markets and routes relevant to your customers. For high-rise branding, the wall condition, viewing distance, safe access arrangements and required permissions are equally important.</p>
           </article>
           <article>
             <span className="ua-guide-number">02 / LARGE-FORMAT ADVERTISING</span>
             <h3>For bold roadside messages</h3>
-            <p>Outdoor hoardings use dedicated display structures for larger-format communication. Their suitability depends on viewing distance, surrounding traffic, the message's legibility and available placements. Keep the headline simple enough to read while passing.</p>
+            <p>Hoardings and unipoles use dedicated structures for larger-format messages. Suitability depends on viewing distance, surrounding traffic, legibility, structural requirements and available placements. Keep the message simple enough to read while passing.</p>
           </article>
           <article>
             <span className="ua-guide-number">03 / THE CAMPAIGN BRIEF</span>
             <h3>What should you share for a quote?</h3>
-            <p>Tell us your target city or route, intended audience, preferred format and campaign objective. Where available, include artwork, approximate dimensions, number of locations and your expected campaign period. These details help define a practical scope.</p>
+            <p>Tell us your target city or route, intended audience, preferred format and campaign objective. If the enquiry is for a sign board, share the fascia dimensions and whether lighting is needed. For outdoor campaigns, include the number of sites, artwork and target period. These details help us define a practical scope.</p>
           </article>
         </div>
         <div className="ua-guide-bottom">
@@ -240,9 +282,9 @@ export default function Home() {
       <section className="ua-faq ua-content-width">
         <div><Eyebrow>A FEW MORE DETAILS</Eyebrow><h2>Before we<br /><em>get started.</em></h2></div>
         <div className="ua-faq-list">
-          <details><summary>Which advertising formats are available? <span>+</span></summary><p>Unique Ads focuses on wall painting advertisements and outdoor hoardings. We can discuss the right format for your campaign goals.</p></details>
+          <details><summary>Which advertising formats are available? <span>+</span></summary><p>Our services include regular and high-rise wall painting, outdoor hoardings, unipole advertising, glow sign boards, backlit and non-backlit flex boards, and embedded sign boards. We can discuss the appropriate material, location and scope for your project.</p></details>
           <details><summary>Where can Unique Ads run campaigns? <span>+</span></summary><p>We serve businesses across Telangana, Andhra Pradesh and Karnataka, subject to location availability and an agreed scope of work.</p></details>
-          <details><summary>How do I choose between wall painting and hoardings? <span>+</span></summary><p>Start with your target audience, preferred road or locality and message. Wall paintings use suitable wall surfaces, while hoardings use dedicated advertising structures. The best fit depends on visibility, location availability and the agreed budget.</p></details>
+          <details><summary>How do I choose between wall painting and hoardings? <span>+</span></summary><p>Start with your target audience, preferred road or locality and message. Painted walls suit repeat local visibility, while hoardings and unipoles carry larger messages along roads. Glow signs, flex boards and embedded signs are usually chosen for storefronts or defined display locations. The best fit depends on viewing distance, permissions, available space and budget.</p></details>
           <details><summary>Do outdoor wall advertisements require permission? <span>+</span></summary><p>Property owner consent and any applicable local approvals must be checked before work begins. Placement availability and requirements vary by site.</p></details>
           <details><summary>How do I get a quotation? <span>+</span></summary><p>Use the enquiry form below and share your business, preferred format, location and campaign requirements. Your message opens in WhatsApp for you to send.</p></details>
         </div>

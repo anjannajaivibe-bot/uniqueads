@@ -487,3 +487,43 @@
   .ua-hero h1{font-size:45px}
   .ua-about-copy h2,.ua-section-heading h2,.ua-guide-heading h2,.ua-approach-copy h2,.ua-faq h2{font-size:43px}
 }
+
+/* Additional services: editorial 3-column rhythm, scoped to the public site. */
+.ua-more-services{padding-top:clamp(54px,6.5vw,100px);margin-top:clamp(54px,6.5vw,100px);border-top:1px solid var(--ua-line)}
+.ua-more-services-heading{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr);gap:clamp(24px,5vw,80px);align-items:end;margin-bottom:clamp(30px,4vw,55px)}
+.ua-services-kicker{display:block;font-size:10px;line-height:1.5;letter-spacing:.16em;font-weight:800;color:var(--ua-accent);margin-bottom:22px}
+.ua-more-services-heading h3{font-size:clamp(43px,5vw,76px);line-height:1.1;letter-spacing:-.055em}
+.ua-more-services-heading>p{font-size:14px;line-height:1.85;color:#5c6875;max-width:420px;padding-bottom:8px}
+.ua-service-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(17px,2.2vw,31px);align-items:stretch}
+.ua-service-card{min-width:0;background:#fff;border:1px solid var(--ua-line);display:flex;flex-direction:column;scroll-margin-top:24px;transition:border-color .2s ease,transform .2s ease}
+.ua-service-card:hover{border-color:#b3b7af;transform:translateY(-3px)}
+.ua-service-card-image{position:relative;aspect-ratio:4/3;overflow:hidden;background:#e9ebe9}
+.ua-service-card-image img{width:100%;height:100%;object-fit:cover;transition:transform .45s ease}
+.ua-service-card:hover .ua-service-card-image img{transform:scale(1.035)}
+.ua-service-card-image:after{content:"";position:absolute;inset:68% 0 0;background:linear-gradient(transparent,rgba(10,22,40,.62));pointer-events:none}
+.ua-service-card-image figcaption{position:absolute;z-index:1;bottom:16px;left:19px;right:19px;display:flex;gap:12px;align-items:baseline;color:white;font-size:13px;font-weight:800}
+.ua-service-card-image figcaption span{font-size:9px;font-weight:650;letter-spacing:.12em}
+.ua-service-card-copy{display:flex;flex-direction:column;flex:1;padding:clamp(23px,2.5vw,37px)}
+.ua-service-category{font-size:9px;font-weight:850;line-height:1.5;letter-spacing:.15em;color:var(--ua-accent);margin-bottom:17px}
+.ua-service-card-copy h4{font-family:Georgia,"Times New Roman",serif;font-weight:400;letter-spacing:-.035em;font-size:clamp(28px,2.65vw,39px);line-height:1.14;margin:0 0 15px;color:var(--ua-ink)}
+.ua-service-card-copy>p{font-size:13px;line-height:1.8;color:#566573;margin:0 0 26px;max-width:48ch}
+.ua-service-cta{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--ua-line);padding-top:15px;margin-top:auto;font-size:12px;font-weight:800}
+.ua-service-cta span{font-size:20px;font-weight:400}
+@media(max-width:1050px){
+ .ua-service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .ua-service-card-copy h4{font-size:clamp(30px,3.6vw,39px)}
+}
+@media(max-width:700px){
+ .ua-more-services{padding-top:48px;margin-top:47px}
+ .ua-more-services-heading{grid-template-columns:1fr;gap:16px;margin-bottom:27px}
+ .ua-services-kicker{margin-bottom:15px}
+ .ua-more-services-heading h3{font-size:clamp(40px,8.3vw,57px)}
+ .ua-more-services-heading>p{max-width:500px;padding:0}
+ .ua-service-grid{grid-template-columns:1fr;gap:21px}
+ .ua-service-card-image{aspect-ratio:4/3}
+ .ua-service-card-copy{padding:24px 23px 26px}
+ .ua-service-card-copy h4{font-size:35px}
+ .ua-service-card-copy>p{margin-bottom:23px}
+ .ua-service-card:hover{transform:none}
+}
+@media(prefers-reduced-motion:reduce){.ua-service-card,.ua-service-card-image img{transition:none}}

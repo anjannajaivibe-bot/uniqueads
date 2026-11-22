@@ -39,7 +39,7 @@ export function MarketingInquiry() {
       <div className="ua-form-grid">
         <label>Your name <input name="name" type="text" placeholder="Full name" autoComplete="name" maxLength={90} required /></label>
         <label>Phone number <input name="phone" type="tel" placeholder="10-digit mobile" autoComplete="tel" inputMode="tel" minLength={10} maxLength={10} pattern="[0-9]{10}" required /></label>
-        <label>Interested in <select name="service" defaultValue="" required><option value="" disabled>Select a service</option><option>Wall painting advertisements</option><option>Outdoor hoardings</option><option>Both formats</option></select></label>
+        <label>Interested in <select name="service" defaultValue="" required><option value="" disabled>Select a service</option><option>Wall painting advertisements</option><option>High-rise wall painting</option><option>Outdoor hoardings</option><option>Unipole advertising</option><option>Glow sign boards</option><option>Backlit flex boards</option><option>Non-backlit flex boards</option><option>Embedded sign boards</option><option>Multiple advertising formats</option></select></label>
         <label>Target location <input name="location" type="text" placeholder="City, area or route" maxLength={120} required /></label>
         <label className="ua-form-full">Campaign details <textarea name="details" rows={3} maxLength={700} placeholder="Tell us about your brand, locations or campaign goals (optional)" /></label>
       </div>
